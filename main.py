@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy
 import numpy as np
 from stl import mesh
-from stl import mesh
 from mpl_toolkits import mplot3d
 from matplotlib import pyplot
 import math
@@ -15,10 +14,9 @@ def do_stuff():
     axes = mplot3d.Axes3D(figure3)
 
     # Load the STL files and add the vectors to the plot
-    #your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
-    your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
+    # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
+    # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
-    vertex_count = len(your_mesh.vectors)
     axes.add_collection3d(mplot3d.art3d.Poly3DCollection(your_mesh.vectors))
 
     # Auto scale to the mesh size
@@ -62,11 +60,11 @@ def do_stuff():
 
     plot_values_2d_x, plot_values_2d_y = rotate_origin_only((plot_values[:, 0], plot_values[:, 1]), theta)
     plot_values_2d_z = plot_values[:, 2]
-    fig2 = plt.figure(2)
+    plt.figure(2)
 
     pyplot.plot(plot_values_2d_y, plot_values_2d_z, 'o', color='blue')
 
-    fig4 = plt.figure(4)
+    plt.figure(4)
     plot_values_2d_x_reshaped = numpy.reshape(plot_values_2d_y, (-1, 3))
     plot_values_2d_z_reshaped = numpy.reshape(plot_values_2d_z, (-1, 3))
 
