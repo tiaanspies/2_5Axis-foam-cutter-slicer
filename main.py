@@ -9,20 +9,21 @@ import trimesh
 
 
 def do_stuff():
+    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # plot stl 3d model--------------------------
-    figure3 = pyplot.figure(3)
-    plot_axes = mplot3d.Axes3D(figure3)
+    # figure3 = pyplot.figure(3)
+    # plot_axes = mplot3d.Axes3D(figure3)
 
     # Load the STL files and add the vectors to the plot
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
-    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
-    plot_axes.add_collection3d(mplot3d.art3d.Poly3DCollection(your_mesh.vectors))
 
-    # Auto scale to the mesh size
-    scale = your_mesh.points.flatten()
-    plot_axes.auto_scale_xyz(scale, scale, scale)
-    pyplot.title("Stl file displaying")
+    # plot_axes.add_collection3d(mplot3d.art3d.Poly3DCollection(your_mesh.vectors))
+    #
+    # # Auto scale to the mesh size
+    # scale = your_mesh.points.flatten()
+    # plot_axes.auto_scale_xyz(scale, scale, scale)
+    # pyplot.title("Stl file displaying")
     # define plane to project onto ----------------------
 
     plane_normal_theta = math.radians(90)
@@ -49,12 +50,12 @@ def do_stuff():
 
     # ---------------plot projected values-------------------------------
 
-    fig1 = pyplot.figure(1)
-
-    ax = fig1.add_subplot(111, projection='3d')
-
-    ax.scatter(points_on_plane_stretched[:, 0], points_on_plane_stretched[:, 1], points_on_plane_stretched[:, 2])
-    pyplot.xlabel('X')
+    # fig1 = pyplot.figure(1)
+    #
+    # ax = fig1.add_subplot(111, projection='3d')
+    #
+    # ax.scatter(points_on_plane_stretched[:, 0], points_on_plane_stretched[:, 1], points_on_plane_stretched[:, 2])
+    # pyplot.xlabel('X')
     # --------------------------------------------------------------
 
     # ------------------rotate plane onto yz plane creating a 2d view-----------
@@ -95,49 +96,75 @@ def do_stuff():
         if abs(z - z_min) < 0.1 and y > y_max_given_z_min:
             y_max_given_z_min = y
             z_exact = z
-    # ------find all triangles that contain bottom right point---------------------
 
-    z_match_indexes = numpy.where(points_2d_z == z_exact)
-    y_match_indexes = numpy.where(points_2d_y == y_max_given_z_min)
+    home_z = z_exact
+    home_y = y_max_given_z_min
+    angle_previous = 420
 
-    match_intersection_indexes = numpy.intersect1d(z_match_indexes, y_match_indexes)
+    counter = 0
+    print("hi")
+    # end condition for future: (home_z != z_exact and home_y != y_max_given_z_min)
+    while counter < 3:
 
-    # -------find first neighbor from starting from 0 degrees--------
-    min_angle_to_neighbor = 420
-    min_neigh_z = 0
-    min_neigh_y = 0
-    for index in match_intersection_indexes:
-        triangle_id = index % 3
-        triangle_index_start = index - triangle_id
-        neighbors_id = numpy.where([0, 1, 2] != triangle_id)
+        # ------find all triangles that contain bottom right point---------------------
+        z_match_indexes = numpy.where(points_2d_z == home_z)
+        y_match_indexes = numpy.where(points_2d_y == home_y)
 
-        z_diff_1 = points_2d_z[triangle_index_start + neighbors_id[0][0]] - points_2d_z[index]
-        y_diff_1 = points_2d_y[triangle_index_start + neighbors_id[0][0]] - points_2d_y[index]
-        z_diff_2 = points_2d_z[triangle_index_start + neighbors_id[0][1]] - points_2d_z[index]
-        y_diff_2 = points_2d_y[triangle_index_start + neighbors_id[0][1]] - points_2d_y[index]
+        match_intersection_indexes = numpy.intersect1d(z_match_indexes, y_match_indexes)
 
-        if abs(z_diff_1) > 1e-8 or abs(y_diff_1) > 1e-8:
-            angle_to_neighbor = numpy.arctan2(z_diff_1, y_diff_1)
-            if angle_to_neighbor < min_angle_to_neighbor:
-                min_angle_to_neighbor = angle_to_neighbor
-                min_neigh_z = points_2d_z[triangle_index_start + neighbors_id[0][0]]
-                min_neigh_y = points_2d_y[triangle_index_start + neighbors_id[0][0]]
+        # -------find first neighbor from starting from 0 degrees--------
+        min_angle_to_neighbor = angle_previous
+        min_neigh_z = 0
+        min_neigh_y = 0
+        for index in match_intersection_indexes:
 
-            pyplot.plot([points_2d_y[index], points_2d_y[triangle_index_start + neighbors_id[0][0]]]
-                    , [points_2d_z[index], points_2d_z[triangle_index_start + neighbors_id[0][0]]]
-                    , color='green')
+            triangle_id = index % 3
+            triangle_index_start = index - triangle_id
+            neighbors_id = numpy.where([0, 1, 2] != triangle_id)
 
-        if abs(z_diff_2) > 1e-8 or abs(y_diff_2) > 1e-8:
-            angle_to_neighbor = numpy.arctan2(z_diff_2, y_diff_2)
-            if angle_to_neighbor < min_angle_to_neighbor:
-                min_angle_to_neighbor = angle_to_neighbor
-                min_neigh_z = points_2d_z[triangle_index_start + neighbors_id[0][1]]
-                min_neigh_y = points_2d_y[triangle_index_start + neighbors_id[0][1]]
+            z_diff_1 = points_2d_z[triangle_index_start + neighbors_id[0][0]] - points_2d_z[index]
+            y_diff_1 = points_2d_y[triangle_index_start + neighbors_id[0][0]] - points_2d_y[index]
+            z_diff_2 = points_2d_z[triangle_index_start + neighbors_id[0][1]] - points_2d_z[index]
+            y_diff_2 = points_2d_y[triangle_index_start + neighbors_id[0][1]] - points_2d_y[index]
 
-            pyplot.plot([points_2d_y[index], points_2d_y[triangle_index_start + neighbors_id[0][1]]]
-                    , [points_2d_z[index], points_2d_z[triangle_index_start + neighbors_id[0][1]]]
-                    , color='green')
-    pyplot.plot(min_neigh_y, min_neigh_z, 'o', color='orange')
+            if abs(z_diff_1) > 1e-8 or abs(y_diff_1) > 1e-8:
+                angle_to_neighbor = numpy.arctan2(z_diff_1, y_diff_1)
+                if angle_to_neighbor > angle_previous:
+                    difference = angle_to_neighbor-angle_previous
+                else:
+                    difference = 360-angle_previous+angle_to_neighbor
+
+                if difference < min_angle_to_neighbor:
+                    min_angle_to_neighbor = difference
+                    min_neigh_z = points_2d_z[triangle_index_start + neighbors_id[0][0]]
+                    min_neigh_y = points_2d_y[triangle_index_start + neighbors_id[0][0]]
+
+                pyplot.plot([points_2d_y[index], points_2d_y[triangle_index_start + neighbors_id[0][0]]]
+                        , [points_2d_z[index], points_2d_z[triangle_index_start + neighbors_id[0][0]]]
+                        , color='green')
+
+            if abs(z_diff_2) > 1e-8 or abs(y_diff_2) > 1e-8:
+                angle_to_neighbor = numpy.arctan2(z_diff_2, y_diff_2)
+                if angle_to_neighbor > angle_previous:
+                    difference = angle_to_neighbor - angle_previous
+                else:
+                    difference = 360 - angle_previous + angle_to_neighbor
+
+                if difference < min_angle_to_neighbor:
+                    min_angle_to_neighbor = difference
+                    min_neigh_z = points_2d_z[triangle_index_start + neighbors_id[0][1]]
+                    min_neigh_y = points_2d_y[triangle_index_start + neighbors_id[0][1]]
+
+                pyplot.plot([points_2d_y[index], points_2d_y[triangle_index_start + neighbors_id[0][1]]]
+                        , [points_2d_z[index], points_2d_z[triangle_index_start + neighbors_id[0][1]]]
+                        , color='green')
+
+        pyplot.plot(min_neigh_y, min_neigh_z, 'o', color='orange')
+
+        home_z = min_neigh_z
+        home_y = min_neigh_y
+        counter += 1
+        angle_previous = (min_angle_to_neighbor + numpy.pi) % (2 * numpy.pi)
     pyplot.show()
 
 
