@@ -77,9 +77,9 @@ def do_stuff():
     pyplot.plot(points_2d_y, points_2d_z, 'o', color='blue')
 
     for y, z in zip(points_2d_y_collapsed, points_2d_z_collapsed):
-        pyplot.plot([y[0], y[1]], [z[0], z[1]], color='red')
-        pyplot.plot([y[1], y[2]], [z[1], z[2]], color='red')
-        pyplot.plot([y[2], y[0]], [z[2], z[0]], color='red')
+        pyplot.plot([y[0], y[1]], [z[0], z[1]], color='red', linewidth=1)
+        pyplot.plot([y[1], y[2]], [z[1], z[2]], color='red', linewidth=1)
+        pyplot.plot([y[2], y[0]], [z[2], z[0]], color='red', linewidth=1)
 
     # pyplot.show()
     # ----------------------------------------------------------------
@@ -99,13 +99,11 @@ def do_stuff():
 
     home_z = z_exact
     home_y = y_max_given_z_min
-    angle_previous = 420
+    angle_previous = numpy.deg2rad(180)
 
     counter = 0
-    print("hi")
     # end condition for future: (home_z != z_exact and home_y != y_max_given_z_min)
-    while counter < 3:
-
+    while counter < 4:
         # ------find all triangles that contain bottom right point---------------------
         z_match_indexes = numpy.where(points_2d_z == home_z)
         y_match_indexes = numpy.where(points_2d_y == home_y)
@@ -113,7 +111,8 @@ def do_stuff():
         match_intersection_indexes = numpy.intersect1d(z_match_indexes, y_match_indexes)
 
         # -------find first neighbor from starting from 0 degrees--------
-        min_angle_to_neighbor = angle_previous
+        min_angle = 10
+        min_difference = numpy.pi*2
         min_neigh_z = 0
         min_neigh_y = 0
         for index in match_intersection_indexes:
@@ -129,13 +128,17 @@ def do_stuff():
 
             if abs(z_diff_1) > 1e-8 or abs(y_diff_1) > 1e-8:
                 angle_to_neighbor = numpy.arctan2(z_diff_1, y_diff_1)
-                if angle_to_neighbor > angle_previous:
+                if angle_to_neighbor < 0:
+                    angle_to_neighbor += numpy.pi*2
+
+                if angle_to_neighbor > angle_previous + 1e-10:
                     difference = angle_to_neighbor-angle_previous
                 else:
-                    difference = 360-angle_previous+angle_to_neighbor
+                    difference = numpy.pi*2-angle_previous+angle_to_neighbor
 
-                if difference < min_angle_to_neighbor:
-                    min_angle_to_neighbor = difference
+                if difference < min_difference:
+                    min_angle = angle_to_neighbor
+                    min_difference = difference
                     min_neigh_z = points_2d_z[triangle_index_start + neighbors_id[0][0]]
                     min_neigh_y = points_2d_y[triangle_index_start + neighbors_id[0][0]]
 
@@ -145,13 +148,17 @@ def do_stuff():
 
             if abs(z_diff_2) > 1e-8 or abs(y_diff_2) > 1e-8:
                 angle_to_neighbor = numpy.arctan2(z_diff_2, y_diff_2)
-                if angle_to_neighbor > angle_previous:
+                if angle_to_neighbor < 0:
+                    angle_to_neighbor += numpy.pi*2
+
+                if angle_to_neighbor > angle_previous + 1e-10:
                     difference = angle_to_neighbor - angle_previous
                 else:
-                    difference = 360 - angle_previous + angle_to_neighbor
+                    difference = numpy.pi*2 - angle_previous + angle_to_neighbor
 
-                if difference < min_angle_to_neighbor:
-                    min_angle_to_neighbor = difference
+                if difference < min_difference:
+                    min_angle = angle_to_neighbor
+                    min_difference = difference
                     min_neigh_z = points_2d_z[triangle_index_start + neighbors_id[0][1]]
                     min_neigh_y = points_2d_y[triangle_index_start + neighbors_id[0][1]]
 
@@ -160,11 +167,12 @@ def do_stuff():
                         , color='green')
 
         pyplot.plot(min_neigh_y, min_neigh_z, 'o', color='orange')
+        pyplot.plot([home_y, min_neigh_y], [home_z, min_neigh_z], color='black', linewidth=4)
 
         home_z = min_neigh_z
         home_y = min_neigh_y
         counter += 1
-        angle_previous = (min_angle_to_neighbor + numpy.pi) % (2 * numpy.pi)
+        angle_previous = (min_angle + numpy.pi) % (2 * numpy.pi)
     pyplot.show()
 
 
