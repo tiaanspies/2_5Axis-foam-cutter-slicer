@@ -10,9 +10,9 @@ import trimesh
 
 
 def do_stuff():
-    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
+    # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
-    # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
+    your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
     """plot stl 3d model--------------------------"""
     # figure3 = pyplot.figure(3)
@@ -178,7 +178,7 @@ def do_stuff():
     min_neigh_z = current_vert.neighbors_z[0]
     min_neigh_y = current_vert.neighbors_y[0]
     counter = 0
-    stop_limit = 200
+    stop_limit = 4
     angle_previous = numpy.deg2rad(180)
 
     ro_vertexes = [previous_vert]
@@ -201,7 +201,7 @@ def do_stuff():
                 difference = numpy.pi * 2 - angle_previous + angle_to_neighbor
 
             if abs(difference - min_difference) < 1e-2:  # if it lies in same direction check distance
-                dist = math.sqrt(z_diff_1 ** 2 + y_diff_1 ** 2)
+                dist = z_diff_1 ** 2 + y_diff_1 ** 2  # it is squared distance but this doesnt matter
                 if dist > max_distance:
                     max_distance = dist
                     min_angle = angle_to_neighbor
@@ -297,6 +297,22 @@ def replace_neighbors(vertex, old, new_y, new_z):
         return True
 
 
+def sq_shortest_dist_to_point(ax, ay, bx, by, px, py):
+    dx = bx - ax
+    dy = by - ay
+    dr2 = float(dx ** 2 + dy ** 2)
+
+    lerp = ((px - ax) * dx + (py - ay) * dy) / dr2
+
+    x = lerp * dx + ax
+    y = lerp * dy + ay
+
+    _dx = x - px
+    _dy = y - py
+    square_dist = _dx ** 2 + _dy ** 2
+    return square_dist
+
+
 def rotate_origin_only(xy, radians):
     """Only rotate a point around the origin (0, 0)."""
     x, y = xy
@@ -340,4 +356,5 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
 
 
 if __name__ == '__main__':
+
     do_stuff()
