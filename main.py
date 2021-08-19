@@ -5,6 +5,7 @@ from stl import mesh
 from mpl_toolkits import mplot3d
 from matplotlib import pyplot
 import math
+from operator import attrgetter
 import trimesh
 
 
@@ -78,6 +79,7 @@ def do_stuff():
             self.z = z_p
             self.neighbors_z = neighbors_z
             self.neighbors_y = neighbors_y
+
     """Create new data system where vertices are not duplicated and there is a reference to every neighbor"""
     vertexes = []
     for index, (z, y) in enumerate(zip(points_2d_z, points_2d_y)):
@@ -119,170 +121,112 @@ def do_stuff():
             else:
                 neighbors_id = [0, 1]
 
-            if (abs(points_2d_z[triangle_index_start + neighbors_id[0]]  # check if neighbors are the same point
-                    - points_2d_z[triangle_index_start + neighbors_id[1]]) < 0.01) and (
-                    abs(points_2d_y[triangle_index_start + neighbors_id[0]]
-                        - points_2d_y[triangle_index_start + neighbors_id[1]]) < 0.01):
-                neighbor_z = [points_2d_z[triangle_index_start + neighbors_id[0]]]
-                neighbor_y = [points_2d_y[triangle_index_start + neighbors_id[0]]]
-            else:
-                neighbor_z = [points_2d_z[triangle_index_start + neighbors_id[0]],
-                              points_2d_z[triangle_index_start + neighbors_id[1]]]
-                neighbor_y = [points_2d_y[triangle_index_start + neighbors_id[0]],
-                              points_2d_y[triangle_index_start + neighbors_id[1]]]
+            neighbor_z = points_2d_z[triangle_index_start + neighbors_id[0]]
+            neighbor_y = points_2d_y[triangle_index_start + neighbors_id[0]]
 
-            vertexes.append(Vertex(y, z, neighbor_z, neighbor_y))
+            neighbors_z = []
+            neighbors_y = []
+            if z != neighbor_z or y != neighbor_y:
+                neighbors_z = [neighbor_z]
+                neighbors_y = [neighbor_y]
+                # check if neighbors are the same point
+                if abs(neighbor_z - points_2d_z[triangle_index_start + neighbors_id[1]]) > 0.01 or abs(
+                        neighbor_y - points_2d_y[triangle_index_start + neighbors_id[1]]) > 0.01:
+                    neighbors_z.append(points_2d_z[triangle_index_start + neighbors_id[1]])
+                    neighbors_y.append(points_2d_y[triangle_index_start + neighbors_id[1]])
+            else:
+                neighbors_z.append(points_2d_z[triangle_index_start + neighbors_id[1]])
+                neighbors_y.append(points_2d_y[triangle_index_start + neighbors_id[1]])
+
+            vertexes.append(Vertex(y, z, neighbors_z, neighbors_y))
 
     plt.figure(2)
     for vertex in vertexes:
         pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
         for neigh_z, neigh_y in zip(vertex.neighbors_z, vertex.neighbors_y):
             pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
-    pyplot.show()
-    # # group back into nx3 matrix so that triangles vertices can be joined
-    # points_2d_y_collapsed = numpy.reshape(points_2d_y, (-1, 3))
-    # points_2d_z_collapsed = numpy.reshape(points_2d_z, (-1, 3))
-    #
-    # # ---------------plot 2d shape with vectors included--------------
-    # plt.figure(2)
-    # pyplot.plot(points_2d_y, points_2d_z, 'o', color='blue')
-    #
-    # for y, z in zip(points_2d_y_collapsed, points_2d_z_collapsed):
-    #     pyplot.plot([y[0], y[1]], [z[0], z[1]], color='red', linewidth=1)
-    #     pyplot.plot([y[1], y[2]], [z[1], z[2]], color='red', linewidth=1)
-    #     pyplot.plot([y[2], y[0]], [z[2], z[0]], color='red', linewidth=1)
-    #
-    # # pyplot.show()
-    # # ----------------------------------------------------------------
-    #
-    # # -------FIND PATH AROUND 2D IMAGE-------------------------------
-    # # -------find starting point in bottom right of image------------
-    # z_min_index = numpy.argmin(points_2d_z)
-    #
+
+    """---------------Find bottom left and right points-------------------------"""
+    z_min = min(vertexes, key=attrgetter('z')).z
+
     # y_max_given_z_min = points_2d_y[z_min_index]  # select initial z to compare rest with
     # y_left_given_z_min = points_2d_y[z_min_index]
-    # z_min = points_2d_z[z_min_index]
-    # z_exact = z_min
-    #
-    # for y, z in zip(points_2d_y, points_2d_z):
-    #     if abs(z - z_min) < 0.1 and y > y_max_given_z_min:
-    #         y_max_given_z_min = y
-    #         z_exact = z
-    #
-    # for y, z in zip(points_2d_y, points_2d_z):
-    #     if abs(z - z_min) < 0.1 and y < y_left_given_z_min:
-    #         y_left_given_z_min = y
-    #         z_exact = z
-    #
-    # home_z = z_exact
-    # home_y = y_max_given_z_min
-    # angle_previous = numpy.deg2rad(180)
-    #
-    # counter = 0
-    # stop_limit = 12
-    # # rough_path_z = numpy.array([home_z])
-    # # rough_path_y = numpy.array([home_y])]
-    #
-    # # end condition for future: (home_z != z_exact and home_y != y_max_given_z_min)
-    # while (abs(z_min - home_z) > 0.1 or abs(y_left_given_z_min - home_y) > 0.1 or counter == 0) \
-    #         and counter < stop_limit:
-    #     # ------find all triangles that contain point---------------------
-    #     z_match_indexes = numpy.where(abs(points_2d_z - home_z) < 0.05)
-    #     y_match_indexes = numpy.where(abs(points_2d_y - home_y) < 0.05)
-    #
-    #     match_intersection_indexes = numpy.intersect1d(z_match_indexes, y_match_indexes)
-    #
-    #     # -------find first neighbor from starting from 0 degrees--------
-    #     min_angle = 10
-    #     min_difference = numpy.pi * 2
-    #     min_neigh_z = 0
-    #     min_neigh_y = 0
-    #     max_distance = 0
-    #
-    #     for index in match_intersection_indexes:
-    #
-    #         triangle_id = index % 3
-    #         triangle_index_start = index - triangle_id
-    #         neighbors_id = numpy.where([0, 1, 2] != triangle_id)
-    #
-    #         z_diff_1 = points_2d_z[triangle_index_start + neighbors_id[0][0]] - points_2d_z[index]
-    #         y_diff_1 = points_2d_y[triangle_index_start + neighbors_id[0][0]] - points_2d_y[index]
-    #         z_diff_2 = points_2d_z[triangle_index_start + neighbors_id[0][1]] - points_2d_z[index]
-    #         y_diff_2 = points_2d_y[triangle_index_start + neighbors_id[0][1]] - points_2d_y[index]
-    #
-    #         if abs(z_diff_1) > 1e-8 or abs(y_diff_1) > 1e-8:
-    #             angle_to_neighbor = numpy.arctan2(z_diff_1, y_diff_1)
-    #             if angle_to_neighbor < 0:
-    #                 angle_to_neighbor += numpy.pi * 2
-    #
-    #             if angle_to_neighbor > angle_previous + 1e-10:
-    #                 difference = angle_to_neighbor - angle_previous
-    #             else:
-    #                 difference = numpy.pi * 2 - angle_previous + angle_to_neighbor
-    #
-    #             if abs(difference - min_difference) < 1e-2:
-    #                 dist = math.sqrt(z_diff_1 ** 2 + y_diff_1 ** 2)
-    #                 if dist > max_distance:
-    #                     max_distance = dist
-    #                     min_angle = angle_to_neighbor
-    #                     min_difference = difference
-    #                     min_neigh_z = points_2d_z[triangle_index_start + neighbors_id[0][0]]
-    #                     min_neigh_y = points_2d_y[triangle_index_start + neighbors_id[0][0]]
-    #             elif difference < min_difference:
-    #                 max_distance = math.sqrt(z_diff_1 ** 2 + y_diff_1 ** 2)
-    #                 min_angle = angle_to_neighbor
-    #                 min_difference = difference
-    #                 min_neigh_z = points_2d_z[triangle_index_start + neighbors_id[0][0]]
-    #                 min_neigh_y = points_2d_y[triangle_index_start + neighbors_id[0][0]]
-    #
-    #             # pyplot.plot([points_2d_y[index], points_2d_y[triangle_index_start + neighbors_id[0][0]]]
-    #             #             , [points_2d_z[index], points_2d_z[triangle_index_start + neighbors_id[0][0]]]
-    #             #             , color='green')
-    #
-    #         if abs(z_diff_2) > 1e-8 or abs(y_diff_2) > 1e-8:
-    #             angle_to_neighbor = numpy.arctan2(z_diff_2, y_diff_2)
-    #             if angle_to_neighbor < 0:
-    #                 angle_to_neighbor += numpy.pi * 2
-    #
-    #             if angle_to_neighbor > angle_previous + 1e-10:
-    #                 difference = angle_to_neighbor - angle_previous
-    #             else:
-    #                 difference = numpy.pi * 2 - angle_previous + angle_to_neighbor
-    #
-    #             if abs(difference - min_difference) < 1e-2:
-    #                 dist = math.sqrt(z_diff_2 ** 2 + y_diff_2 ** 2)
-    #                 if dist > max_distance:
-    #                     max_distance = dist
-    #                     min_angle = angle_to_neighbor
-    #                     min_difference = difference
-    #                     min_neigh_z = points_2d_z[triangle_index_start + neighbors_id[0][1]]
-    #                     min_neigh_y = points_2d_y[triangle_index_start + neighbors_id[0][1]]
-    #             elif difference < min_difference:
-    #                 max_distance = math.sqrt(z_diff_2 ** 2 + y_diff_2 ** 2)
-    #                 min_angle = angle_to_neighbor
-    #                 min_difference = difference
-    #                 min_neigh_z = points_2d_z[triangle_index_start + neighbors_id[0][1]]
-    #                 min_neigh_y = points_2d_y[triangle_index_start + neighbors_id[0][1]]
-    #
-    #             # pyplot.plot([points_2d_y[index], points_2d_y[triangle_index_start + neighbors_id[0][1]]]
-    #             #             , [points_2d_z[index], points_2d_z[triangle_index_start + neighbors_id[0][1]]]
-    #             #             , color='green')
-    #
-    #     # pyplot.plot(min_neigh_y, min_neigh_z, 'o', color='orange')
-    #     pyplot.plot([home_y, min_neigh_y], [home_z, min_neigh_z], color='black', linewidth=5)
-    #
-    #     home_z = min_neigh_z
-    #     home_y = min_neigh_y
-    #
-    #     rough_path_z = numpy.append(rough_path_z, home_z)
-    #     rough_path_y = numpy.append(rough_path_y, home_y)
-    #
-    #     counter += 1
-    #     angle_previous = (min_angle + numpy.pi) % (2 * numpy.pi)
-    #
-    # print("Iterations: ")
-    # print(counter)
-    #
+    z_exact = z_min
+    y_max_given_z_min = -1000
+    y_min_given_z_min = 1000
+
+    for vertex in vertexes:
+        if abs(vertex.z - z_min) < 0.1 and vertex.y < y_min_given_z_min:
+            y_min_given_z_min = vertex.y
+            z_exact = vertex.z
+
+    for vertex in vertexes:
+        if abs(vertex.z - z_min) < 0.1 and vertex.y > y_max_given_z_min:
+            y_max_given_z_min = vertex.y
+            z_exact = vertex.z
+
+    """--------------Find path----------------------------------------"""
+    current_vert = vertexes[0]
+    for vertex in vertexes:
+        if vertex.y == y_max_given_z_min and vertex.z == z_exact:
+            current_vert = vertex
+            break
+
+    min_angle = 10
+
+    min_neigh_z = current_vert.neighbors_z[0]
+    min_neigh_y = current_vert.neighbors_y[0]
+    counter = 0
+    stop_limit = 500
+    angle_previous = numpy.deg2rad(180)
+
+    while (abs(z_min - current_vert.z) > 0.1 or abs(y_min_given_z_min - current_vert.y) > 0.1 or counter == 0) and (
+            counter < stop_limit):
+        min_difference = numpy.pi * 2
+        max_distance = 0
+        for neigh_z, neigh_y in zip(current_vert.neighbors_z, current_vert.neighbors_y):
+            z_diff_1 = neigh_z - current_vert.z
+            y_diff_1 = neigh_y - current_vert.y
+
+            angle_to_neighbor = numpy.arctan2(z_diff_1, y_diff_1)
+            if angle_to_neighbor < 0:
+                angle_to_neighbor += numpy.pi * 2
+
+            if angle_to_neighbor > angle_previous + 1e-10:
+                difference = angle_to_neighbor - angle_previous
+            else:
+                difference = numpy.pi * 2 - angle_previous + angle_to_neighbor
+
+            if abs(difference - min_difference) < 1e-2:  # if it lies in same direction check distance
+                dist = math.sqrt(z_diff_1 ** 2 + y_diff_1 ** 2)
+                if dist > max_distance:
+                    max_distance = dist
+                    min_angle = angle_to_neighbor
+                    min_difference = difference
+                    min_neigh_z = neigh_z
+                    min_neigh_y = neigh_y
+            elif difference < min_difference:  # has closer angle in counterclockwise direction
+                max_distance = math.sqrt(z_diff_1 ** 2 + y_diff_1 ** 2)
+                min_angle = angle_to_neighbor
+                min_difference = difference
+                min_neigh_z = neigh_z
+                min_neigh_y = neigh_y
+
+            pyplot.plot([current_vert.y, neigh_y]
+                        , [current_vert.z, neigh_z]
+                        , color='green')
+        pyplot.plot(min_neigh_y, min_neigh_z, 'o', color='orange')
+
+        counter += 1
+        angle_previous = (min_angle + numpy.pi) % (2 * numpy.pi)
+        for vertex in vertexes:
+            if vertex.y == min_neigh_y and vertex.z == min_neigh_z:
+                current_vert = vertex
+                break
+    print(counter)
+    pyplot.show()
+    home_z = z_exact
+
     # for i in range(0, len(rough_path_y) - 1):
     #     for j in range(i + 1, i + 10):
     #         if j >= len(rough_path_y) - 1:
