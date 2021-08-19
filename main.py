@@ -45,8 +45,8 @@ def do_stuff():
 
     for index_tri, triangle in enumerate(your_mesh.vectors):
         for index_vert, vertex in enumerate(triangle):
-            q = np.multiply(np.dot(plane_normal_vector_normalized, vertex)
-                            , plane_normal_vector_normalized)
+            q = np.multiply(np.dot(plane_normal_vector_normalized, vertex),
+                            plane_normal_vector_normalized)
             points_on_plane[index_tri, index_vert] = np.subtract(triangle[index_vert], q)
 
     # change from nx3 matrix to px1 matrix
@@ -65,9 +65,9 @@ def do_stuff():
 
     # ------------------rotate plane onto yz plane creating a 2d view-----------
     # x values should all be equal to zero
-    points_2d_x, points_2d_y = rotate_origin_only((points_on_plane_stretched[:, 0]
-                                                   , points_on_plane_stretched[:, 1])
-                                                  , plane_normal_theta)
+    points_2d_x, points_2d_y = rotate_origin_only((points_on_plane_stretched[:, 0],
+                                                   points_on_plane_stretched[:, 1]),
+                                                  plane_normal_theta)
     points_2d_z = points_on_plane_stretched[:, 2]
 
     points_2d_y[abs(points_2d_y) < 1e-6] = 0
@@ -167,20 +167,21 @@ def do_stuff():
 
     """--------------Find rough path outline----------------------------------------"""
     current_vert = vertexes[0]
+
     for vertex in vertexes:
         if vertex.y == y_max_given_z_min and vertex.z == z_exact:
             current_vert = vertex
             break
-
+    previous_vert = Vertex(current_vert.y, current_vert.z, [], [])
     min_angle = 10
 
     min_neigh_z = current_vert.neighbors_z[0]
     min_neigh_y = current_vert.neighbors_y[0]
     counter = 0
-    stop_limit = 6
+    stop_limit = 200
     angle_previous = numpy.deg2rad(180)
 
-    ro_vertexes = [current_vert]
+    ro_vertexes = [previous_vert]
 
     while (abs(z_min - current_vert.z) > 0.1 or abs(y_min_given_z_min - current_vert.y) > 0.1 or counter == 0) and (
             counter < stop_limit):
@@ -222,51 +223,78 @@ def do_stuff():
 
         counter += 1
         angle_previous = (min_angle + numpy.pi) % (2 * numpy.pi)
+
         for vertex in vertexes:
             if vertex.y == min_neigh_y and vertex.z == min_neigh_z:
                 current_vert = vertex
-                ro_vertexes.append(current_vert)
                 break
+
+        ro_vertexes[counter - 1].neighbors_z.append(current_vert.z)
+        ro_vertexes[counter - 1].neighbors_y.append(current_vert.y)
+
+        ro_vertexes.append(Vertex(current_vert.y, current_vert.z,
+                                  [ro_vertexes[counter - 1].y], [ro_vertexes[counter - 1].z]))
+
+
     print("iterations for rough outline:")
     print(counter)
-
+    # pyplot.show()
     """---------Add intersections as points and neighbors------------------"""
-    for p, vert in enumerate(ro_vertexes):
-        for i in range(p+1, len(ro_vertexes) - 1):
-            intersect_state, d1, d2 = find_intersection(vert.y, vert.z
-                                                        , ro_vertexes[p+1].y, ro_vertexes[p+1].z
-                                                        , ro_vertexes[i].y, ro_vertexes[i].z
-                                                        , ro_vertexes[i+1].y, ro_vertexes[i+1].z)
-            if intersect_state:
-                new_point_y = vert.y + d1 * (ro_vertexes[p+1].y - vert.y)
-                new_point_z = vert.z + d1 * (ro_vertexes[p+1].z - vert.z)
-                pyplot.plot(new_point_y, new_point_z, 'o', color='Green')
+    p = 0
 
-                replace_neighbors(ro_vertexes[p], ro_vertexes[p + 1], new_point_y, new_point_z)
-                replace_neighbors(ro_vertexes[p + 1], ro_vertexes[p], new_point_y, new_point_z)
-                replace_neighbors(ro_vertexes[i], ro_vertexes[i + 1], new_point_y, new_point_z)
-                replace_neighbors(ro_vertexes[i + 1], ro_vertexes[i], new_point_y, new_point_z)
+    while True:  # for p, vert in enumerate(ro_vertexes):
+        i = 2
+        while True:  # for i in range(p + 1, len(ro_vertexes) - 1):
+            for col_neigh_y, col_neigh_z in zip(ro_vertexes[i].neighbors_y, ro_vertexes[i].neighbors_z):
+                intersect_state, d1, d2 = find_intersection(ro_vertexes[p].y, ro_vertexes[p].z,
+                                                            ro_vertexes[p + 1].y, ro_vertexes[p + 1].z,
+                                                            ro_vertexes[i].y, ro_vertexes[i].z,
+                                                            col_neigh_y, col_neigh_z)
+                if intersect_state:
+                    if i < len(ro_vertexes)-1:
+                        if ro_vertexes[i + 1].y == col_neigh_y and ro_vertexes[i + 1].z == col_neigh_z:
+                            j = i+1
+                    else:
+                        for index_j, vert in enumerate(ro_vertexes):
+                            if vert.y == col_neigh_y and vert.z == col_neigh_y:
+                                j = index_j
+                                break
 
-                neighs_y = [vert.y, ro_vertexes[p+1].y, ro_vertexes[i].y, ro_vertexes[i+1].y]
-                neighs_z = [vert.z, ro_vertexes[p+1].z, ro_vertexes[i].z, ro_vertexes[i+1].z]
+                    new_point_y = ro_vertexes[p].y + d1 * (ro_vertexes[p + 1].y - ro_vertexes[p].y)
+                    new_point_z = ro_vertexes[p].z + d1 * (ro_vertexes[p + 1].z - ro_vertexes[p].z)
 
-                ro_vertexes.insert(p+1, Vertex(new_point_y, new_point_z, neighs_y, neighs_z))
+                    new = False
+                    new = new or replace_neighbors(ro_vertexes[p], ro_vertexes[p + 1], new_point_y, new_point_z)
+                    new = new or replace_neighbors(ro_vertexes[p + 1], ro_vertexes[p], new_point_y, new_point_z)
+                    new = new or replace_neighbors(ro_vertexes[i], ro_vertexes[j], new_point_y, new_point_z)
+                    new = new or replace_neighbors(ro_vertexes[j], ro_vertexes[i], new_point_y, new_point_z)
+
+                    if not new:
+                        neighs_y = [ro_vertexes[p].y, ro_vertexes[p + 1].y, ro_vertexes[i].y, ro_vertexes[j].y]
+                        neighs_z = [ro_vertexes[p].z, ro_vertexes[p + 1].z, ro_vertexes[i].z, ro_vertexes[j].z]
+                        pyplot.plot(new_point_y, new_point_z, 'o', color='Green')
+                        ro_vertexes.insert(p + 1, Vertex(new_point_y, new_point_z, neighs_y, neighs_z))
+
+            i += 1
+            if i >= len(ro_vertexes):
+                break
+        p += 1
+        if p >= len(ro_vertexes) - 3:
+            break
     pyplot.show()
 
 
 def replace_neighbors(vertex, old, new_y, new_z):
     pos = -1
+
     for index, (neigh_y, neigh_z) in enumerate(zip(vertex.neighbors_y, vertex.neighbors_z)):
         if neigh_y == old.y and neigh_z == old.z:
             pos = index
-            break
+            vertex.neighbors_z[pos] = new_z
+            vertex.neighbors_y[pos] = new_y
+            return False
     else:
-        raise ValueError("Neighbor does exist but not found")
-
-    vertex.neighbors_z[pos] = new_z
-    vertex.neighbors_y[pos] = new_y
-    return None
-
+        return True
 
 
 def rotate_origin_only(xy, radians):
@@ -300,10 +328,13 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
     if partial:
         ab = (y1 * (x0 - a1) + b1 * (x1 - x0) + y0 * (a1 - x1)) / denom
 
-    if partial and is_between(0, ab, 1):
+    if partial and is_between(0, ab, 1) and ab > 0.01 and xy > 0.01:
         ab = 1 - ab
         xy = 1 - xy
-        return True, xy, ab
+        if ab > 0.01 and xy > 0.01:
+            return True, xy, ab
+        else:
+            return False, 0, 0
     else:
         return False, 0, 0
 
