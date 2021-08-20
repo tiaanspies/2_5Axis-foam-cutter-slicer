@@ -2,11 +2,10 @@ import matplotlib.pyplot as plt
 import numpy
 import numpy as np
 from stl import mesh
-from mpl_toolkits import mplot3d
 from matplotlib import pyplot
 import math
-from operator import attrgetter
-import trimesh
+
+p_tol = 0.01
 
 
 def do_stuff():
@@ -15,6 +14,7 @@ def do_stuff():
     your_mesh = mesh.Mesh.from_file('cubev2.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
+
     """plot stl 3d model--------------------------"""
     # figure3 = pyplot.figure(3)
     # plot_axes = mplot3d.Axes3D(figure3)
@@ -85,7 +85,7 @@ def do_stuff():
     vertexes = []
     for index, (z, y) in enumerate(zip(points_2d_z, points_2d_y)):
         for vertex in vertexes:
-            if abs(vertex.y - y) < 0.01 and abs(vertex.z - z) < 0.01:  # it is a duplicate.
+            if abs(vertex.y - y) < p_tol and abs(vertex.z - z) < p_tol:  # it is a duplicate.
                 # Check if new neighbors are found
                 triangle_id = index % 3
                 triangle_index_start = index - triangle_id
@@ -97,17 +97,19 @@ def do_stuff():
                 else:
                     neighbors_id = [0, 1]
 
-                is_duplicate_z = points_2d_z[triangle_index_start + neighbors_id[0]] in vertex.neighbors_z
-                is_duplicate_y = points_2d_y[triangle_index_start + neighbors_id[0]] in vertex.neighbors_y
-
-                if is_duplicate_z is False or is_duplicate_y is False:
+                for y_n, z_n in zip(vertex.neighbors_y, vertex.neighbors_z):
+                    if abs(points_2d_z[triangle_index_start + neighbors_id[0]] - z_n) < p_tol and (
+                            abs(points_2d_y[triangle_index_start + neighbors_id[0]] - y_n) < p_tol):
+                        break
+                else:
                     vertex.neighbors_z.append(points_2d_z[triangle_index_start + neighbors_id[0]])
                     vertex.neighbors_y.append(points_2d_y[triangle_index_start + neighbors_id[0]])
 
-                is_duplicate_z = points_2d_z[triangle_index_start + neighbors_id[1]] in vertex.neighbors_z
-                is_duplicate_y = points_2d_y[triangle_index_start + neighbors_id[1]] in vertex.neighbors_y
-
-                if is_duplicate_z is False or is_duplicate_y is False:
+                for y_n, z_n in zip(vertex.neighbors_y, vertex.neighbors_z):
+                    if abs(points_2d_z[triangle_index_start + neighbors_id[1]] - z_n) < p_tol and (
+                            abs(points_2d_y[triangle_index_start + neighbors_id[1]] - y_n) < p_tol):
+                        break
+                else:
                     vertex.neighbors_z.append(points_2d_z[triangle_index_start + neighbors_id[1]])
                     vertex.neighbors_y.append(points_2d_y[triangle_index_start + neighbors_id[1]])
 
@@ -131,8 +133,8 @@ def do_stuff():
                 neigh_z = [neighbor_z]
                 neigh_y = [neighbor_y]
                 # check if neighbors are the same point
-                if abs(neighbor_z - points_2d_z[triangle_index_start + neighbors_id[1]]) > 0.01 or abs(
-                        neighbor_y - points_2d_y[triangle_index_start + neighbors_id[1]]) > 0.01:
+                if abs(neighbor_z - points_2d_z[triangle_index_start + neighbors_id[1]]) > p_tol or abs(
+                        neighbor_y - points_2d_y[triangle_index_start + neighbors_id[1]]) > p_tol:
                     neigh_z.append(points_2d_z[triangle_index_start + neighbors_id[1]])
                     neigh_y.append(points_2d_y[triangle_index_start + neighbors_id[1]])
             else:
@@ -166,7 +168,7 @@ def do_stuff():
                     c = (vertexes[vert_2_index].z - each_vertex.z) * each_vertex.y - \
                         (vertexes[vert_2_index].y - each_vertex.y) * each_vertex.z
 
-                    f = a*y + b*z + c
+                    f = a * y + b * z + c
                     if f < 0:
                         sign = -1
                     else:
@@ -265,15 +267,13 @@ def find_common(vert1, vert2):
 
 def find_vert(vertexes_a, p_y, p_z):
     for index, vert in enumerate(vertexes_a):
-        if abs(vert.y - p_y) < 0.01 and abs(vert.z - p_z) < 0.01:
+        if abs(vert.y - p_y) < p_tol and abs(vert.z - p_z) < p_tol:
             return index
     else:
         raise ValueError("NO vertex found")
 
 
 def replace_neighbors(vertex, old, new_y, new_z):
-    pos = -1
-
     for index, (neigh_y, neigh_z) in enumerate(zip(vertex.neighbors_y, vertex.neighbors_z)):
         if neigh_y == old.y and neigh_z == old.z:
             pos = index
@@ -319,7 +319,6 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
     #    // and are only defined when the result is true
     partial = False
     denom = (b0 - b1) * (x0 - x1) - (y0 - y1) * (a0 - a1)
-    xy = 0.0
     ab = 0.0
 
     if denom == 0:
@@ -331,10 +330,10 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
     if partial:
         ab = (y1 * (x0 - a1) + b1 * (x1 - x0) + y0 * (a1 - x1)) / denom
 
-    if partial and is_between(0, ab, 1) and ab > 0.01 and xy > 0.01:
+    if partial and is_between(0, ab, 1) and ab > p_tol and xy > p_tol:
         ab = 1 - ab
         xy = 1 - xy
-        if ab > 0.01 and xy > 0.01:
+        if ab > p_tol and xy > p_tol:
             return True, xy, ab
         else:
             return False, 0, 0
@@ -343,5 +342,4 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
 
 
 if __name__ == '__main__':
-
     do_stuff()
