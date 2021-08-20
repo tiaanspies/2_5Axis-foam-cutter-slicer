@@ -8,6 +8,14 @@ import math
 p_tol = 0.01
 
 
+class Vertex:
+    def __init__(self, y_p, z_p, neighbours_y, neighbours_z):
+        self.y = y_p
+        self.z = z_p
+        self.neighbours_z = neighbours_z
+        self.neighbours_y = neighbours_y
+
+
 def do_stuff():
     # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
@@ -75,13 +83,6 @@ def do_stuff():
     points_2d_z[abs(points_2d_z) < 1e-6] = 0
 
     print("start")
-
-    class Vertex:
-        def __init__(self, y_p, z_p, neighbours_y, neighbours_z):
-            self.y = y_p
-            self.z = z_p
-            self.neighbours_z = neighbours_z
-            self.neighbours_y = neighbours_y
 
     """Create new data system where vertices are not duplicated and there is a reference to every neighbour"""
     vertexes = []
@@ -159,7 +160,8 @@ def do_stuff():
     # therefore both the points are outer vertices
     # If the two points have more than one neighbour in common check which sides of the line the neighbours lie on
     # If all the common neighbours lie on the same side it is also a exterior edge
-    outer_vertexes = []
+
+    outer_edges = []
 
     for each_vertex in vertexes:
         for neighbour_vert_y, neighbour_vert_z in zip(each_vertex.neighbours_y, each_vertex.neighbours_z):
@@ -167,9 +169,8 @@ def do_stuff():
             common_y, common_z = find_common(each_vertex, vertexes[vert_2_index])
 
             if len(common_y) == 1:
-                if each_vertex not in outer_vertexes:
-                    # outer_vertexes.append([each_vertex, vertexes[vert_2_index]])
-                    add_vertex(outer_vertexes, each_vertex)
+                if each_vertex not in outer_edges:
+                    outer_edges.append([each_vertex, vertexes[vert_2_index]])
             else:
                 old_sign = 0
                 inner_edge = False
@@ -191,10 +192,32 @@ def do_stuff():
                         inner_edge = True
 
                 if not inner_edge:
-                    # outer_vertexes.append([each_vertex, vertexes[vert_2_index]])
-                    add_vertex(outer_vertexes, each_vertex)
+                    outer_edges.append([each_vertex, vertexes[vert_2_index]])
 
     print("Interior vertexes are deleted")
+
+    # for edge in outer_edges:
+    #     pyplot.plot(edge[0].y, edge[0].z, 'o', color='blue')
+    #     pyplot.plot(edge[1].y, edge[1].z, 'o', color='blue')
+    #
+    #     pyplot.plot([edge[0].y, edge[1].y], [edge[0].z, edge[1].z], color='red', linewidth=1)
+    #
+    # pyplot.show()
+
+    """Reconstruct edges"""
+    outer_vertexes = [Vertex(outer_edges[0][0].y, outer_edges[0][0].z, [outer_edges[0][1].y], [outer_edges[0][1].z]),
+                      Vertex(outer_edges[0][1].y, outer_edges[0][1].z, [outer_edges[0][0].y], [outer_edges[0][0].z])]
+    for edge_i in outer_edges:
+        for edge_o in outer_edges:
+            if edge_o is not edge_i:
+                if edge_i[0] is edge_o[1]:
+                    reconstruct_vert(outer_vertexes, edge_i[0], edge_i[1], edge_o[0])
+                elif edge_i[1] is edge_o[0]:
+                    reconstruct_vert(outer_vertexes, edge_i[1], edge_i[0], edge_o[1])
+                elif edge_i[0] is edge_o[0]:
+                    reconstruct_vert(outer_vertexes, edge_i[0], edge_i[1], edge_o[1])
+                elif edge_i[1] is edge_o[1]:
+                    reconstruct_vert(outer_vertexes, edge_i[1], edge_i[0], edge_o[0])
 
     for vertex in outer_vertexes:
         pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
@@ -203,23 +226,22 @@ def do_stuff():
 
     pyplot.show()
 
-    """Remove neighbours that do not exist anymore"""
-    for i, vertex in enumerate(outer_vertexes):
-        index = 0
-        while True:
-            # for index, (neigh_y, neigh_z) in enumerate(zip(vertex.neighbours_y, vertex.neighbours_z)):
-            for vertex_2 in outer_vertexes:
-                if abs(outer_vertexes[i].neighbours_z[index] - vertex_2.z) < p_tol and abs(
-                        outer_vertexes[i].neighbours_y[index] - vertex_2.y) < p_tol:
-                    break
-            else:
-                outer_vertexes[i].neighbours_z.pop(index)
-                outer_vertexes[i].neighbours_y.pop(index)
-                index -= 1
-
-            index += 1
-            if index >= len(outer_vertexes[i].neighbours_z):
-                break
+    # for i, vertex in enumerate(outer_vertexes):
+    #     index = 0
+    #     while True:
+    #         # for index, (neigh_y, neigh_z) in enumerate(zip(vertex.neighbours_y, vertex.neighbours_z)):
+    #         for vertex_2 in outer_vertexes:
+    #             if abs(outer_vertexes[i].neighbours_z[index] - vertex_2.z) < p_tol and abs(
+    #                     outer_vertexes[i].neighbours_y[index] - vertex_2.y) < p_tol:
+    #                 break
+    #         else:
+    #             outer_vertexes[i].neighbours_z.pop(index)
+    #             outer_vertexes[i].neighbours_y.pop(index)
+    #             index -= 1
+    #
+    #         index += 1
+    #         if index >= len(outer_vertexes[i].neighbours_z):
+    #             break
 
     print("Removed false neighbours")
 
@@ -358,6 +380,26 @@ def delete_neighbours(vertexes, main_id, to_del_ids):
                 vertexes[main_id].neighbours_y.pop(i)
                 vertexes[main_id].neighbours_z.pop(i)
                 break
+
+
+def reconstruct_vert(vertexes, pt_com, pt_1, pt_2):
+    for index, vert in enumerate(vertexes):
+        if pt_com.y == vert.y and pt_com.z == vert.z:
+            add_neighbour(vertexes[index], pt_1.y, pt_1.z)
+            add_neighbour(vertexes[index], pt_2.y, pt_2.z)
+            break
+    else:
+        vertexes.append(Vertex(pt_com.y, pt_com.z, [pt_1.y, pt_2.y], [pt_1.z, pt_2.z]))
+
+    for index, vert in enumerate(vertexes):
+        if pt_1.y == vert.y and pt_1.z == vert.z:
+            add_neighbour(vertexes[index], pt_com.y, pt_com.z)
+            break
+
+    for index, vert in enumerate(vertexes):
+        if pt_2.y == vert.y and pt_2.z == vert.z:
+            add_neighbour(vertexes[index], pt_com.y, pt_com.z)
+            break
 
 
 def add_vertex(vertexes, new_vert):
