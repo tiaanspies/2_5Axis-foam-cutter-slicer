@@ -9,9 +9,9 @@ p_tol = 0.01
 
 
 def do_stuff():
-    # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
+    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
-    your_mesh = mesh.Mesh.from_file('cubev2.stl')
+    # your_mesh = mesh.Mesh.from_file('cubev2.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
@@ -30,7 +30,7 @@ def do_stuff():
     # plot_axes.auto_scale_xyz(scale, scale, scale)
     # pyplot.title("Stl file displaying")
     # define plane to project onto ----------------------
-
+    """-------------------------------------------"""
     plane_normal_theta = math.radians(90)
     plane_normal_vector = numpy.array([math.cos(plane_normal_theta), math.sin(plane_normal_theta), 0])
     plane_normal_vector[abs(plane_normal_vector) < 1e-15] = 0.0
@@ -74,91 +74,99 @@ def do_stuff():
     points_2d_y[abs(points_2d_y) < 1e-6] = 0
     points_2d_z[abs(points_2d_z) < 1e-6] = 0
 
+    print("start")
+
     class Vertex:
-        def __init__(self, y_p, z_p, neighbors_y, neighbors_z):
+        def __init__(self, y_p, z_p, neighbours_y, neighbours_z):
             self.y = y_p
             self.z = z_p
-            self.neighbors_z = neighbors_z
-            self.neighbors_y = neighbors_y
+            self.neighbours_z = neighbours_z
+            self.neighbours_y = neighbours_y
 
-    """Create new data system where vertices are not duplicated and there is a reference to every neighbor"""
+    """Create new data system where vertices are not duplicated and there is a reference to every neighbour"""
     vertexes = []
     for index, (z, y) in enumerate(zip(points_2d_z, points_2d_y)):
         for vertex in vertexes:
             if abs(vertex.y - y) < p_tol and abs(vertex.z - z) < p_tol:  # it is a duplicate.
-                # Check if new neighbors are found
+                # Check if new neighbours are found
                 triangle_id = index % 3
                 triangle_index_start = index - triangle_id
 
-                if triangle_id == 0:  # neighbors are two points left out of 3
-                    neighbors_id = [1, 2]
+                if triangle_id == 0:  # neighbours are two points left out of 3
+                    neighbours_id = [1, 2]
                 elif triangle_id == 1:
-                    neighbors_id = [0, 2]
+                    neighbours_id = [0, 2]
                 else:
-                    neighbors_id = [0, 1]
+                    neighbours_id = [0, 1]
 
-                for y_n, z_n in zip(vertex.neighbors_y, vertex.neighbors_z):
-                    if abs(points_2d_z[triangle_index_start + neighbors_id[0]] - z_n) < p_tol and (
-                            abs(points_2d_y[triangle_index_start + neighbors_id[0]] - y_n) < p_tol):
+                for y_n, z_n in zip(vertex.neighbours_y, vertex.neighbours_z):
+                    if abs(points_2d_z[triangle_index_start + neighbours_id[0]] - z_n) < p_tol and (
+                            abs(points_2d_y[triangle_index_start + neighbours_id[0]] - y_n) < p_tol):
                         break
                 else:
-                    vertex.neighbors_z.append(points_2d_z[triangle_index_start + neighbors_id[0]])
-                    vertex.neighbors_y.append(points_2d_y[triangle_index_start + neighbors_id[0]])
+                    vertex.neighbours_z.append(points_2d_z[triangle_index_start + neighbours_id[0]])
+                    vertex.neighbours_y.append(points_2d_y[triangle_index_start + neighbours_id[0]])
 
-                for y_n, z_n in zip(vertex.neighbors_y, vertex.neighbors_z):
-                    if abs(points_2d_z[triangle_index_start + neighbors_id[1]] - z_n) < p_tol and (
-                            abs(points_2d_y[triangle_index_start + neighbors_id[1]] - y_n) < p_tol):
+                for y_n, z_n in zip(vertex.neighbours_y, vertex.neighbours_z):
+                    if abs(points_2d_z[triangle_index_start + neighbours_id[1]] - z_n) < p_tol and (
+                            abs(points_2d_y[triangle_index_start + neighbours_id[1]] - y_n) < p_tol):
                         break
                 else:
-                    vertex.neighbors_z.append(points_2d_z[triangle_index_start + neighbors_id[1]])
-                    vertex.neighbors_y.append(points_2d_y[triangle_index_start + neighbors_id[1]])
+                    vertex.neighbours_z.append(points_2d_z[triangle_index_start + neighbours_id[1]])
+                    vertex.neighbours_y.append(points_2d_y[triangle_index_start + neighbours_id[1]])
 
                 break
         else:  # Point is not a duplicate, add it to list
             triangle_id = index % 3
             triangle_index_start = index - triangle_id
             if triangle_id == 0:
-                neighbors_id = [1, 2]
+                neighbours_id = [1, 2]
             elif triangle_id == 1:
-                neighbors_id = [0, 2]
+                neighbours_id = [0, 2]
             else:
-                neighbors_id = [0, 1]
+                neighbours_id = [0, 1]
 
-            neighbor_z = points_2d_z[triangle_index_start + neighbors_id[0]]
-            neighbor_y = points_2d_y[triangle_index_start + neighbors_id[0]]
+            neighbour_z = points_2d_z[triangle_index_start + neighbours_id[0]]
+            neighbour_y = points_2d_y[triangle_index_start + neighbours_id[0]]
 
             neigh_z = []
             neigh_y = []
-            if z != neighbor_z or y != neighbor_y:
-                neigh_z = [neighbor_z]
-                neigh_y = [neighbor_y]
-                # check if neighbors are the same point
-                if abs(neighbor_z - points_2d_z[triangle_index_start + neighbors_id[1]]) > p_tol or abs(
-                        neighbor_y - points_2d_y[triangle_index_start + neighbors_id[1]]) > p_tol:
-                    neigh_z.append(points_2d_z[triangle_index_start + neighbors_id[1]])
-                    neigh_y.append(points_2d_y[triangle_index_start + neighbors_id[1]])
+            if z != neighbour_z or y != neighbour_y:
+                neigh_z = [neighbour_z]
+                neigh_y = [neighbour_y]
+                # check if neighbours are the same point
+                if abs(neighbour_z - points_2d_z[triangle_index_start + neighbours_id[1]]) > p_tol or abs(
+                        neighbour_y - points_2d_y[triangle_index_start + neighbours_id[1]]) > p_tol:
+                    neigh_z.append(points_2d_z[triangle_index_start + neighbours_id[1]])
+                    neigh_y.append(points_2d_y[triangle_index_start + neighbours_id[1]])
             else:
-                neigh_z.append(points_2d_z[triangle_index_start + neighbors_id[1]])
-                neigh_y.append(points_2d_y[triangle_index_start + neighbors_id[1]])
+                neigh_z.append(points_2d_z[triangle_index_start + neighbours_id[1]])
+                neigh_y.append(points_2d_y[triangle_index_start + neighbours_id[1]])
 
             vertexes.append(Vertex(y, z, neigh_y, neigh_z))
 
     plt.figure(2)
-    for vertex in vertexes:
-        pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
-        for neigh_z, neigh_y in zip(vertex.neighbors_z, vertex.neighbors_y):
-            pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
-    pyplot.show()
+    # for vertex in vertexes:
+    #     pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
+    #     for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
+    #         pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
+    # pyplot.show()
+    """delete all interior vertices by checking the following:"""
+    # if the two points at end of edge only have one common neighbour then the edge is on the outside
+    # therefore both the points are outer vertices
+    # If the two points have more than one neighbour in common check which sides of the line the neighbours lie on
+    # If all the common neighbours lie on the same side it is also a exterior edge
     outer_vertexes = []
 
     for each_vertex in vertexes:
-        for neighbor_vert_y, neighbor_vert_z in zip(each_vertex.neighbors_y, each_vertex.neighbors_z):
-            vert_2_index = find_vert(vertexes, neighbor_vert_y, neighbor_vert_z)
+        for neighbour_vert_y, neighbour_vert_z in zip(each_vertex.neighbours_y, each_vertex.neighbours_z):
+            vert_2_index = find_vert(vertexes, neighbour_vert_y, neighbour_vert_z)
             common_y, common_z = find_common(each_vertex, vertexes[vert_2_index])
 
             if len(common_y) == 1:
                 if each_vertex not in outer_vertexes:
-                    outer_vertexes.append([each_vertex, vertexes[vert_2_index]])
+                    # outer_vertexes.append([each_vertex, vertexes[vert_2_index]])
+                    add_vertex(outer_vertexes, each_vertex)
             else:
                 old_sign = 0
                 inner_edge = False
@@ -180,15 +188,46 @@ def do_stuff():
                         inner_edge = True
 
                 if not inner_edge:
-                    outer_vertexes.append([each_vertex, vertexes[vert_2_index]])
+                    # outer_vertexes.append([each_vertex, vertexes[vert_2_index]])
+                    add_vertex(outer_vertexes, each_vertex)
 
-    for edge in outer_vertexes:
-        pyplot.plot(edge[0].y, edge[0].z, 'o', color='blue')
-        pyplot.plot(edge[1].y, edge[1].z, 'o', color='blue')
+    print("Interior vertexes are deleted")
 
-        pyplot.plot([edge[0].y, edge[1].y], [edge[0].z, edge[1].z], color='red', linewidth=1)
+    """Remove neighbours that do not exist anymore"""
+    for i, vertex in enumerate(outer_vertexes):
+        index = 0
+        while True:
+            # for index, (neigh_y, neigh_z) in enumerate(zip(vertex.neighbours_y, vertex.neighbours_z)):
+            for vertex_2 in outer_vertexes:
+                if abs(outer_vertexes[i].neighbours_z[index] - vertex_2.z) < p_tol and abs(
+                        outer_vertexes[i].neighbours_y[index] - vertex_2.y) < p_tol:
+                    break
+            else:
+                outer_vertexes[i].neighbours_z.pop(index)
+                outer_vertexes[i].neighbours_y.pop(index)
+                index -= 1
+
+            index += 1
+            if index >= len(outer_vertexes[i].neighbours_z):
+                break
+
+    print("Removed false neighbours")
+
+    for vertex in outer_vertexes:
+        pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
+        for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
+            pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
 
     pyplot.show()
+
+    """chain neighbours on straight lines instead of them jumping over multiple vertices"""
+
+    for vertex in outer_vertexes:
+        for neigh_y, neigh_z in zip(vertex.neighbours_y, vertex.neighbours_z):
+            for vertex_2 in outer_vertexes:
+                if sq_shortest_dist_to_point(vertex.y, vertex.z, neigh_y, neigh_z, vertex_2.y, vertex_2.z) < 0.01:
+
+
     """---------------Find bottom left and right points-------------------------"""
     # z_min = min(vertexes, key=attrgetter('z')).z
     #
@@ -208,13 +247,13 @@ def do_stuff():
     #         y_max_given_z_min = vertex.y
     #         z_exact = vertex.z
 
-    """---------Add intersections as points and neighbors------------------"""
+    """---------Add intersections as points and neighbours------------------"""
     # p = 0
     #
     # while True:  # for p, vert in enumerate(ro_vertexes):
     #     i = 2
     #     while True:  # for i in range(p + 1, len(ro_vertexes) - 1):
-    #         for col_neigh_y, col_neigh_z in zip(ro_vertexes[i].neighbors_y, ro_vertexes[i].neighbors_z):
+    #         for col_neigh_y, col_neigh_z in zip(ro_vertexes[i].neighbours_y, ro_vertexes[i].neighbours_z):
     #             intersect_state, d1, d2 = find_intersection(ro_vertexes[p].y, ro_vertexes[p].z,
     #                                                         ro_vertexes[p + 1].y, ro_vertexes[p + 1].z,
     #                                                         ro_vertexes[i].y, ro_vertexes[i].z,
@@ -233,10 +272,10 @@ def do_stuff():
     #                 new_point_z = ro_vertexes[p].z + d1 * (ro_vertexes[p + 1].z - ro_vertexes[p].z)
     #
     #                 new = False
-    #                 new = new or replace_neighbors(ro_vertexes[p], ro_vertexes[p + 1], new_point_y, new_point_z)
-    #                 new = new or replace_neighbors(ro_vertexes[p + 1], ro_vertexes[p], new_point_y, new_point_z)
-    #                 new = new or replace_neighbors(ro_vertexes[i], ro_vertexes[j], new_point_y, new_point_z)
-    #                 new = new or replace_neighbors(ro_vertexes[j], ro_vertexes[i], new_point_y, new_point_z)
+    #                 new = new or replace_neighbours(ro_vertexes[p], ro_vertexes[p + 1], new_point_y, new_point_z)
+    #                 new = new or replace_neighbours(ro_vertexes[p + 1], ro_vertexes[p], new_point_y, new_point_z)
+    #                 new = new or replace_neighbours(ro_vertexes[i], ro_vertexes[j], new_point_y, new_point_z)
+    #                 new = new or replace_neighbours(ro_vertexes[j], ro_vertexes[i], new_point_y, new_point_z)
     #
     #                 if not new:
     #                     neighs_y = [ro_vertexes[p].y, ro_vertexes[p + 1].y, ro_vertexes[i].y, ro_vertexes[j].y]
@@ -256,8 +295,8 @@ def do_stuff():
 def find_common(vert1, vert2):
     common_y = []
     common_z = []
-    for neigh_1_y, neigh_1_z in zip(vert1.neighbors_y, vert1.neighbors_z):
-        for neigh_2_y, neigh_2_z in zip(vert2.neighbors_y, vert2.neighbors_z):
+    for neigh_1_y, neigh_1_z in zip(vert1.neighbours_y, vert1.neighbours_z):
+        for neigh_2_y, neigh_2_z in zip(vert2.neighbours_y, vert2.neighbours_z):
             if neigh_1_y == neigh_2_y and neigh_2_z == neigh_1_z:
                 common_y.append(neigh_1_y)
                 common_z.append(neigh_1_z)
@@ -273,12 +312,21 @@ def find_vert(vertexes_a, p_y, p_z):
         raise ValueError("NO vertex found")
 
 
-def replace_neighbors(vertex, old, new_y, new_z):
-    for index, (neigh_y, neigh_z) in enumerate(zip(vertex.neighbors_y, vertex.neighbors_z)):
+def add_vertex(vertexes, new_vert):
+    for vert in vertexes:
+        if vert is new_vert:
+            break
+    else:
+        vertexes.append(new_vert)
+    return None
+
+
+def replace_neighbours(vertex, old, new_y, new_z):
+    for index, (neigh_y, neigh_z) in enumerate(zip(vertex.neighbours_y, vertex.neighbours_z)):
         if neigh_y == old.y and neigh_z == old.z:
             pos = index
-            vertex.neighbors_z[pos] = new_z
-            vertex.neighbors_y[pos] = new_y
+            vertex.neighbours_z[pos] = new_z
+            vertex.neighbours_y[pos] = new_y
             return False
     else:
         return True
