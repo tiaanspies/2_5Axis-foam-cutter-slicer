@@ -10,9 +10,9 @@ import trimesh
 
 
 def do_stuff():
-    # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
+    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
-    your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
+    # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
     """plot stl 3d model--------------------------"""
     # figure3 = pyplot.figure(3)
@@ -178,7 +178,7 @@ def do_stuff():
     min_neigh_z = current_vert.neighbors_z[0]
     min_neigh_y = current_vert.neighbors_y[0]
     counter = 0
-    stop_limit = 4
+    stop_limit = 200
     angle_previous = numpy.deg2rad(180)
 
     ro_vertexes = [previous_vert]
@@ -235,10 +235,9 @@ def do_stuff():
         ro_vertexes.append(Vertex(current_vert.y, current_vert.z,
                                   [ro_vertexes[counter - 1].y], [ro_vertexes[counter - 1].z]))
 
-
     print("iterations for rough outline:")
     print(counter)
-    # pyplot.show()
+
     """---------Add intersections as points and neighbors------------------"""
     p = 0
 
