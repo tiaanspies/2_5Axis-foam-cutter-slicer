@@ -3,6 +3,7 @@ import numpy
 import numpy as np
 from stl import mesh
 from matplotlib import pyplot
+from mpl_toolkits import mplot3d
 import math
 
 p_tol = 0.01
@@ -26,18 +27,18 @@ def do_stuff():
     """plot stl 3d model--------------------------"""
     # figure3 = pyplot.figure(3)
     # plot_axes = mplot3d.Axes3D(figure3)
-
-    # Load the STL files and add the vectors to the plot
-    # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
-    # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
-
+    #
+    # # # Load the STL files and add the vectors to the plot
+    # # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
+    # # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
+    #
     # plot_axes.add_collection3d(mplot3d.art3d.Poly3DCollection(your_mesh.vectors))
     #
     # # Auto scale to the mesh size
     # scale = your_mesh.points.flatten()
     # plot_axes.auto_scale_xyz(scale, scale, scale)
     # pyplot.title("Stl file displaying")
-    # define plane to project onto ----------------------
+    # # define plane to project onto ----------------------
     """-------------------------------------------"""
     plane_normal_theta = math.radians(90)
     plane_normal_vector = numpy.array([math.cos(plane_normal_theta), math.sin(plane_normal_theta), 0])
@@ -149,12 +150,12 @@ def do_stuff():
 
             vertexes.append(Vertex(y, z, neigh_y, neigh_z))
 
-    plt.figure(2)
+    # plt.figure(2)
     # for vertex in vertexes:
     #     pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
     #     for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
     #         pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
-    # pyplot.show()
+    # # pyplot.show()
     """delete all interior vertices by checking the following:"""
     # if the two points at end of edge only have one common neighbour then the edge is on the outside
     # therefore both the points are outer vertices
@@ -202,7 +203,7 @@ def do_stuff():
     #
     #     pyplot.plot([edge[0].y, edge[1].y], [edge[0].z, edge[1].z], color='red', linewidth=1)
     #
-    # pyplot.show()
+    # # pyplot.show()
 
     """Reconstruct edges"""
     outer_vertexes = [Vertex(outer_edges[0][0].y, outer_edges[0][0].z, [outer_edges[0][1].y], [outer_edges[0][1].z]),
@@ -218,39 +219,15 @@ def do_stuff():
                     reconstruct_vert(outer_vertexes, edge_i[0], edge_i[1], edge_o[1])
                 elif edge_i[1] is edge_o[1]:
                     reconstruct_vert(outer_vertexes, edge_i[1], edge_i[0], edge_o[0])
-
-    for vertex in outer_vertexes:
-        pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
-        for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
-            pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
-
-    pyplot.show()
-
-    # for i, vertex in enumerate(outer_vertexes):
-    #     index = 0
-    #     while True:
-    #         # for index, (neigh_y, neigh_z) in enumerate(zip(vertex.neighbours_y, vertex.neighbours_z)):
-    #         for vertex_2 in outer_vertexes:
-    #             if abs(outer_vertexes[i].neighbours_z[index] - vertex_2.z) < p_tol and abs(
-    #                     outer_vertexes[i].neighbours_y[index] - vertex_2.y) < p_tol:
-    #                 break
-    #         else:
-    #             outer_vertexes[i].neighbours_z.pop(index)
-    #             outer_vertexes[i].neighbours_y.pop(index)
-    #             index -= 1
-    #
-    #         index += 1
-    #         if index >= len(outer_vertexes[i].neighbours_z):
-    #             break
-
-    print("Removed false neighbours")
-
+    # pyplot.figure(5)
     # for vertex in outer_vertexes:
     #     pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
     #     for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
     #         pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
     #
-    # pyplot.show()
+    # # pyplot.show()
+
+    print("Removed false neighbours")
 
     """chain neighbours on straight lines instead of them jumping over multiple vertices"""
 
@@ -262,33 +239,44 @@ def do_stuff():
                     continue
 
                 if sq_shortest_dist_to_point(close_vtx.y, close_vtx.z, far_y, far_z, mid_vtx.y, mid_vtx.z) < 0.01:
-                    intersecting_pt_ids.append(mid_id)
+                    if is_c_between(close_vtx.y, close_vtx.z, far_y, far_z, mid_vtx.y, mid_vtx.z):
+                        intersecting_pt_ids.append(mid_id)
 
             if len(intersecting_pt_ids) > 0:
                 min_dist = 1000000
                 min_i = 0
-                for pt in intersecting_pt_ids:
-                    d2 = (outer_vertexes[pt].y-close_vtx.y)**2 + (outer_vertexes[pt].z-close_vtx.z)
+                closest_id = 0
+                for index, pt in enumerate(intersecting_pt_ids):
+                    d2 = (outer_vertexes[pt].y-close_vtx.y)**2 + (outer_vertexes[pt].z-close_vtx.z)**2
                     if d2 < min_dist:
                         min_dist = d2
                         min_i = pt
+                        closest_id = index
 
-                add_neighbour(outer_vertexes[min_i], close_vtx.y, close_vtx.z)
+                add_neighbour(outer_vertexes[min_i], close_vtx.y, close_vtx.z)  #
                 add_neighbour(outer_vertexes[min_i], far_y, far_z)
 
-                delete_neighbours(outer_vertexes, close_i, intersecting_pt_ids)
+                intersecting_pt_ids.pop(closest_id)
+
                 add_neighbour(outer_vertexes[close_i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
+                #add_neighbour(outer_vertexes[far.i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
 
                 for i, vert in enumerate(outer_vertexes):
                     if abs(far_y - vert.y) < p_tol and abs(far_z - vert.z) < p_tol:
                         add_neighbour(outer_vertexes[i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
+                        delete_neighbours(outer_vertexes, i, [close_i])
+                        delete_neighbours(outer_vertexes, close_i, [i])
+                        delete_neighbours(outer_vertexes, close_i, intersecting_pt_ids)
                         break
-    # for vertex in outer_vertexes:
-    #     pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
-    #     for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
-    #         pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
-    #
-    # pyplot.show()
+
+    print("Shortening complete")
+    pyplot.figure(6)
+    for vertex in outer_vertexes:
+        pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
+        for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
+            pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
+
+    pyplot.show()
     """---------------Find bottom left and right points-------------------------"""
     # z_min = min(vertexes, key=attrgetter('z')).z
     #
@@ -374,6 +362,10 @@ def find_vert(vertexes_a, p_y, p_z):
 
 
 def delete_neighbours(vertexes, main_id, to_del_ids):
+
+    if len(to_del_ids) == 0:
+        return None
+
     for del_id in to_del_ids:
         for i, (y, z) in enumerate(zip(vertexes[main_id].neighbours_y, vertexes[main_id].neighbours_z)):
             if abs(y - vertexes[del_id].y) < p_tol and abs(z - vertexes[del_id].z) < p_tol:
@@ -429,6 +421,18 @@ def replace_neighbours(vertex, old, new_y, new_z):
             vertex.neighbours_z[pos] = new_z
             vertex.neighbours_y[pos] = new_y
             return False
+    else:
+        return True
+
+
+def is_c_between(ay, az, by, bz, cy, cz):
+    # Check if c is between a and b
+    d_ab = (ay - by)**2 + (az - bz)**2
+    d_ac = (ay - cy)**2 + (az - cz)**2
+    d_bc = (by - cy)**2 + (bz - cz)**2
+
+    if max(d_ac, d_bc) > d_ab:
+        return False
     else:
         return True
 
