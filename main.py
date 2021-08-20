@@ -9,9 +9,9 @@ p_tol = 0.01
 
 
 def do_stuff():
-    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
+    # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
-    # your_mesh = mesh.Mesh.from_file('cubev2.stl')
+    your_mesh = mesh.Mesh.from_file('cubev2.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
@@ -99,22 +99,25 @@ def do_stuff():
                 else:
                     neighbours_id = [0, 1]
 
-                for y_n, z_n in zip(vertex.neighbours_y, vertex.neighbours_z):
-                    if abs(points_2d_z[triangle_index_start + neighbours_id[0]] - z_n) < p_tol and (
-                            abs(points_2d_y[triangle_index_start + neighbours_id[0]] - y_n) < p_tol):
-                        break
-                else:
-                    vertex.neighbours_z.append(points_2d_z[triangle_index_start + neighbours_id[0]])
-                    vertex.neighbours_y.append(points_2d_y[triangle_index_start + neighbours_id[0]])
+                if abs(points_2d_y[triangle_index_start + neighbours_id[0]] - y) > p_tol or abs(
+                        points_2d_z[triangle_index_start + neighbours_id[0]] - z) > p_tol:
+                    for y_n, z_n in zip(vertex.neighbours_y, vertex.neighbours_z):
+                        if abs(points_2d_z[triangle_index_start + neighbours_id[0]] - z_n) < p_tol and (
+                                abs(points_2d_y[triangle_index_start + neighbours_id[0]] - y_n) < p_tol):
+                            break
+                    else:
+                        vertex.neighbours_z.append(points_2d_z[triangle_index_start + neighbours_id[0]])
+                        vertex.neighbours_y.append(points_2d_y[triangle_index_start + neighbours_id[0]])
 
-                for y_n, z_n in zip(vertex.neighbours_y, vertex.neighbours_z):
-                    if abs(points_2d_z[triangle_index_start + neighbours_id[1]] - z_n) < p_tol and (
-                            abs(points_2d_y[triangle_index_start + neighbours_id[1]] - y_n) < p_tol):
-                        break
-                else:
-                    vertex.neighbours_z.append(points_2d_z[triangle_index_start + neighbours_id[1]])
-                    vertex.neighbours_y.append(points_2d_y[triangle_index_start + neighbours_id[1]])
-
+                if abs(points_2d_y[triangle_index_start + neighbours_id[1]] - y) > p_tol or abs(
+                        points_2d_z[triangle_index_start + neighbours_id[1]] - z) > p_tol:
+                    for y_n, z_n in zip(vertex.neighbours_y, vertex.neighbours_z):
+                        if abs(points_2d_z[triangle_index_start + neighbours_id[1]] - z_n) < p_tol and (
+                                abs(points_2d_y[triangle_index_start + neighbours_id[1]] - y_n) < p_tol):
+                            break
+                    else:
+                        vertex.neighbours_z.append(points_2d_z[triangle_index_start + neighbours_id[1]])
+                        vertex.neighbours_y.append(points_2d_y[triangle_index_start + neighbours_id[1]])
                 break
         else:  # Point is not a duplicate, add it to list
             triangle_id = index % 3
@@ -193,6 +196,13 @@ def do_stuff():
 
     print("Interior vertexes are deleted")
 
+    for vertex in outer_vertexes:
+        pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
+        for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
+            pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
+
+    pyplot.show()
+
     """Remove neighbours that do not exist anymore"""
     for i, vertex in enumerate(outer_vertexes):
         index = 0
@@ -213,21 +223,50 @@ def do_stuff():
 
     print("Removed false neighbours")
 
-    for vertex in outer_vertexes:
-        pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
-        for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
-            pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
-
-    pyplot.show()
+    # for vertex in outer_vertexes:
+    #     pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
+    #     for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
+    #         pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
+    #
+    # pyplot.show()
 
     """chain neighbours on straight lines instead of them jumping over multiple vertices"""
 
-    for vertex in outer_vertexes:
-        for neigh_y, neigh_z in zip(vertex.neighbours_y, vertex.neighbours_z):
-            for vertex_2 in outer_vertexes:
-                if sq_shortest_dist_to_point(vertex.y, vertex.z, neigh_y, neigh_z, vertex_2.y, vertex_2.z) < 0.01:
+    for close_i, close_vtx in enumerate(outer_vertexes):
+        for far_i_n, (far_y, far_z) in enumerate(zip(close_vtx.neighbours_y, close_vtx.neighbours_z)):
+            intersecting_pt_ids = []
+            for mid_id, mid_vtx in enumerate(outer_vertexes):
+                if mid_id == close_i:
+                    continue
 
+                if sq_shortest_dist_to_point(close_vtx.y, close_vtx.z, far_y, far_z, mid_vtx.y, mid_vtx.z) < 0.01:
+                    intersecting_pt_ids.append(mid_id)
 
+            if len(intersecting_pt_ids) > 0:
+                min_dist = 1000000
+                min_i = 0
+                for pt in intersecting_pt_ids:
+                    d2 = (outer_vertexes[pt].y-close_vtx.y)**2 + (outer_vertexes[pt].z-close_vtx.z)
+                    if d2 < min_dist:
+                        min_dist = d2
+                        min_i = pt
+
+                add_neighbour(outer_vertexes[min_i], close_vtx.y, close_vtx.z)
+                add_neighbour(outer_vertexes[min_i], far_y, far_z)
+
+                delete_neighbours(outer_vertexes, close_i, intersecting_pt_ids)
+                add_neighbour(outer_vertexes[close_i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
+
+                for i, vert in enumerate(outer_vertexes):
+                    if abs(far_y - vert.y) < p_tol and abs(far_z - vert.z) < p_tol:
+                        add_neighbour(outer_vertexes[i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
+                        break
+    # for vertex in outer_vertexes:
+    #     pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
+    #     for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
+    #         pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
+    #
+    # pyplot.show()
     """---------------Find bottom left and right points-------------------------"""
     # z_min = min(vertexes, key=attrgetter('z')).z
     #
@@ -312,12 +351,32 @@ def find_vert(vertexes_a, p_y, p_z):
         raise ValueError("NO vertex found")
 
 
+def delete_neighbours(vertexes, main_id, to_del_ids):
+    for del_id in to_del_ids:
+        for i, (y, z) in enumerate(zip(vertexes[main_id].neighbours_y, vertexes[main_id].neighbours_z)):
+            if abs(y - vertexes[del_id].y) < p_tol and abs(z - vertexes[del_id].z) < p_tol:
+                vertexes[main_id].neighbours_y.pop(i)
+                vertexes[main_id].neighbours_z.pop(i)
+                break
+
+
 def add_vertex(vertexes, new_vert):
     for vert in vertexes:
         if vert is new_vert:
             break
     else:
         vertexes.append(new_vert)
+    return None
+
+
+def add_neighbour(vertex, new_y, new_z):
+    for neigh_y, neigh_z in zip(vertex.neighbours_y, vertex.neighbours_z):
+        if abs(neigh_y - new_y) < p_tol and abs(neigh_z - new_z) < p_tol:
+            break
+    else:
+        vertex.neighbours_y.append(new_y)
+        vertex.neighbours_z.append(new_z)
+
     return None
 
 
@@ -335,6 +394,15 @@ def replace_neighbours(vertex, old, new_y, new_z):
 def sq_shortest_dist_to_point(ax, ay, bx, by, px, py):
     dx = bx - ax
     dy = by - ay
+
+    p1x = px - ax
+    p2x = px - bx
+    p1y = py - ay
+    p2y = py - by
+
+    if (dx == 0 and dy == 0) or (p1x == 0 and p1y == 0) or (p2x == 0 and p2y == 0):
+        return 1000
+
     dr2 = float(dx ** 2 + dy ** 2)
 
     lerp = ((px - ax) * dx + (py - ay) * dy) / dr2
