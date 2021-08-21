@@ -5,6 +5,7 @@ from stl import mesh
 from matplotlib import pyplot
 from mpl_toolkits import mplot3d
 import math
+import random
 
 p_tol = 0.01
 
@@ -20,7 +21,8 @@ class Vertex:
 def do_stuff():
     # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
-    your_mesh = mesh.Mesh.from_file('cubev2.stl')
+    # your_mesh = mesh.Mesh.from_file('cubev2.stl')
+    your_mesh = mesh.Mesh.from_file('cubev3.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
@@ -40,7 +42,7 @@ def do_stuff():
     # pyplot.title("Stl file displaying")
     # # define plane to project onto ----------------------
     """-------------------------------------------"""
-    plane_normal_theta = math.radians(90)
+    plane_normal_theta = math.radians(0)
     plane_normal_vector = numpy.array([math.cos(plane_normal_theta), math.sin(plane_normal_theta), 0])
     plane_normal_vector[abs(plane_normal_vector) < 1e-15] = 0.0
 
@@ -48,7 +50,7 @@ def do_stuff():
     # theta = np.arctan2(n[1], n[0])  # orientation of plane
 
     plane_normal_vector_normalized = plane_normal_vector / np.linalg.norm(plane_normal_vector)
-
+    print("start")
     """project all points onto the plane------"""
 
     points_on_plane = np.zeros([len(your_mesh.vectors), 3, 3])
@@ -83,7 +85,7 @@ def do_stuff():
     points_2d_y[abs(points_2d_y) < 1e-6] = 0
     points_2d_z[abs(points_2d_z) < 1e-6] = 0
 
-    print("start")
+    print("Projected mesh onto plane")
 
     """Create new data system where vertices are not duplicated and there is a reference to every neighbour"""
     vertexes = []
@@ -131,22 +133,26 @@ def do_stuff():
             else:
                 neighbours_id = [0, 1]
 
-            neighbour_z = points_2d_z[triangle_index_start + neighbours_id[0]]
-            neighbour_y = points_2d_y[triangle_index_start + neighbours_id[0]]
+            neighbour_z0 = points_2d_z[triangle_index_start + neighbours_id[0]]
+            neighbour_y0 = points_2d_y[triangle_index_start + neighbours_id[0]]
+
+            neighbour_z1 = points_2d_z[triangle_index_start + neighbours_id[1]]
+            neighbour_y1 = points_2d_y[triangle_index_start + neighbours_id[1]]
 
             neigh_z = []
             neigh_y = []
-            if z != neighbour_z or y != neighbour_y:
-                neigh_z = [neighbour_z]
-                neigh_y = [neighbour_y]
+            if z != neighbour_z0 or y != neighbour_y0:
+                neigh_z = [neighbour_z0]
+                neigh_y = [neighbour_y0]
                 # check if neighbours are the same point
-                if abs(neighbour_z - points_2d_z[triangle_index_start + neighbours_id[1]]) > p_tol or abs(
-                        neighbour_y - points_2d_y[triangle_index_start + neighbours_id[1]]) > p_tol:
-                    neigh_z.append(points_2d_z[triangle_index_start + neighbours_id[1]])
-                    neigh_y.append(points_2d_y[triangle_index_start + neighbours_id[1]])
+                if abs(neighbour_z0 - neighbour_z1) > p_tol or abs(
+                        neighbour_y0 - neighbour_y1) > p_tol:
+                    if z != neighbour_z1 or y != neighbour_y1:
+                        neigh_z.append(neighbour_z1)
+                        neigh_y.append(neighbour_y1)
             else:
-                neigh_z.append(points_2d_z[triangle_index_start + neighbours_id[1]])
-                neigh_y.append(points_2d_y[triangle_index_start + neighbours_id[1]])
+                neigh_z.append(neighbour_z1)
+                neigh_y.append(neighbour_y1)
 
             vertexes.append(Vertex(y, z, neigh_y, neigh_z))
 
@@ -161,6 +167,8 @@ def do_stuff():
     # therefore both the points are outer vertices
     # If the two points have more than one neighbour in common check which sides of the line the neighbours lie on
     # If all the common neighbours lie on the same side it is also a exterior edge
+
+    print("Translated data system into class")
 
     outer_edges = []
 
@@ -225,14 +233,18 @@ def do_stuff():
     #     for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
     #         pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
     #
-    # # pyplot.show()
+    # pyplot.show()
 
-    print("Removed false neighbours")
+    print("Reconstructed outer vertexes using outer edges")
 
     """chain neighbours on straight lines instead of them jumping over multiple vertices"""
 
     for close_i, close_vtx in enumerate(outer_vertexes):
-        for far_i_n, (far_y, far_z) in enumerate(zip(close_vtx.neighbours_y, close_vtx.neighbours_z)):
+        far_i = 0
+        while True:
+            far_y = close_vtx.neighbours_y[far_i]
+            far_z = close_vtx.neighbours_z[far_i]
+        # for far_i, (far_y, far_z) in enumerate(zip(close_vtx.neighbours_y, close_vtx.neighbours_z)):
             intersecting_pt_ids = []
             for mid_id, mid_vtx in enumerate(outer_vertexes):
                 if mid_id == close_i:
@@ -244,7 +256,7 @@ def do_stuff():
 
             if len(intersecting_pt_ids) > 0:
                 min_dist = 1000000
-                min_i = 0
+                min_i = intersecting_pt_ids[0]
                 closest_id = 0
                 for index, pt in enumerate(intersecting_pt_ids):
                     d2 = (outer_vertexes[pt].y-close_vtx.y)**2 + (outer_vertexes[pt].z-close_vtx.z)**2
@@ -256,10 +268,10 @@ def do_stuff():
                 add_neighbour(outer_vertexes[min_i], close_vtx.y, close_vtx.z)  #
                 add_neighbour(outer_vertexes[min_i], far_y, far_z)
 
+                far_i -= len(intersecting_pt_ids)
                 intersecting_pt_ids.pop(closest_id)
 
                 add_neighbour(outer_vertexes[close_i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
-                #add_neighbour(outer_vertexes[far.i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
 
                 for i, vert in enumerate(outer_vertexes):
                     if abs(far_y - vert.y) < p_tol and abs(far_z - vert.z) < p_tol:
@@ -269,12 +281,24 @@ def do_stuff():
                         delete_neighbours(outer_vertexes, close_i, intersecting_pt_ids)
                         break
 
+            far_i += 1
+            if far_i >= len(close_vtx.neighbours_y):
+                break
+
     print("Shortening complete")
     pyplot.figure(6)
+    r = random.random()
+    b = random.random()
+    g = random.random()
+    c = (r, g, b)
     for vertex in outer_vertexes:
         pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
         for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
-            pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
+            pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color=c, linewidth=3)
+            r = random.random()
+            b = random.random()
+            g = random.random()
+            c = (r, g, b)
 
     pyplot.show()
     """---------------Find bottom left and right points-------------------------"""
