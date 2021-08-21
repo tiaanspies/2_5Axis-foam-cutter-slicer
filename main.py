@@ -21,13 +21,13 @@ class Vertex:
 
 
 def do_stuff():
-    # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
+    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('cubev2.stl')
     # your_mesh = mesh.Mesh.from_file('cubev3.stl')
     # your_mesh = mesh.Mesh.from_file('cubev4.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
-    your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
+    # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
     """plot stl 3d model--------------------------"""
     # figure3 = pyplot.figure(3)
@@ -287,6 +287,7 @@ def do_stuff():
     # print_matrix(outer_vertexes)
 
     """---------Add intersections as points and neighbours------------------"""
+    pyplot.figure(6)
     first = 0
     j = 0
     f_neigh_i = 0
@@ -317,7 +318,7 @@ def do_stuff():
                         new_point_z = outer_vertexes[first].z + d1 * (first_neigh_z - outer_vertexes[first].z)
 
                         new = False
-                        new = new or replace_neighbours(outer_vertexes[first], outer_vertexes[first + 1],
+                        new = new or replace_neighbours(outer_vertexes[first], outer_vertexes[f_neigh_i],
                                                         new_point_y, new_point_z)
                         new = new or replace_neighbours(outer_vertexes[f_neigh_i], outer_vertexes[first],
                                                         new_point_y, new_point_z)
@@ -329,7 +330,7 @@ def do_stuff():
                                         outer_vertexes[i].y, outer_vertexes[j].y]
                             neighs_z = [outer_vertexes[first].z, outer_vertexes[f_neigh_i].z,
                                         outer_vertexes[i].z, outer_vertexes[j].z]
-                            # pyplot.plot(new_point_y, new_point_z, 'o', color='Green')
+                            pyplot.plot(new_point_y, new_point_z, 'o', color='Green')
                             outer_vertexes.insert(first + 1, Vertex(new_point_y, new_point_z, neighs_y, neighs_z))
 
                 i += 1
@@ -363,7 +364,7 @@ def do_stuff():
 
 
 def print_matrix(matrix):
-    pyplot.figure(6)
+
     for vertex in matrix:
         pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
         if abs(vertex.y - -48.5) < 0.1 and abs(vertex.z - 54) < 0.1:
