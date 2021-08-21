@@ -287,7 +287,7 @@ def do_stuff():
     # print_matrix(outer_vertexes)
 
     """---------Add intersections as points and neighbours------------------"""
-    pyplot.figure(6)
+
     first = 0
     j = 0
     f_neigh_i = 0
@@ -330,7 +330,7 @@ def do_stuff():
                                         outer_vertexes[i].y, outer_vertexes[j].y]
                             neighs_z = [outer_vertexes[first].z, outer_vertexes[f_neigh_i].z,
                                         outer_vertexes[i].z, outer_vertexes[j].z]
-                            pyplot.plot(new_point_y, new_point_z, 'o', color='Green')
+                            # pyplot.plot(new_point_y, new_point_z, 'o', color='Green')
                             outer_vertexes.insert(first + 1, Vertex(new_point_y, new_point_z, neighs_y, neighs_z))
 
                 i += 1
@@ -340,27 +340,84 @@ def do_stuff():
         if first >= len(outer_vertexes) - 3:
             break
 
-    print_matrix(outer_vertexes)
+    # print_matrix(outer_vertexes)
     print("Intersections Added")
 
     """---------------Find bottom left and right points-------------------------"""
     z_min_vtx = min(outer_vertexes, key=attrgetter('z'))
     z_min = z_min_vtx.z
-    z_min_index = outer_vertexes.index(z_min_vtx)
+    bottom_right_index = outer_vertexes.index(z_min_vtx)
+    bottom_left_index = outer_vertexes.index(z_min_vtx)
 
     z_exact = z_min
     y_max_given_z_min = -1000
     y_min_given_z_min = 1000
 
-    for vertex in vertexes:
+    for index, vertex in enumerate(outer_vertexes):
         if abs(vertex.z - z_min) < p_tol and vertex.y < y_min_given_z_min:
             y_min_given_z_min = vertex.y
-            z_exact = vertex.z
 
-    for vertex in vertexes:
+    for index, vertex in enumerate(outer_vertexes):
         if abs(vertex.z - z_min) < p_tol and vertex.y > y_max_given_z_min:
             y_max_given_z_min = vertex.y
-            z_exact = vertex.z
+            bottom_right_index = index
+
+    min_angle = 10
+    current_vert = outer_vertexes[bottom_right_index]
+
+    min_neigh_z = current_vert.neighbours_z[0]
+    min_neigh_y = current_vert.neighbours_y[0]
+
+    counter = 0
+    stop_limit = 200
+    angle_previous = numpy.deg2rad(180)
+    pyplot.figure(6)
+    print_matrix(outer_vertexes)
+    while (abs(z_min - current_vert.z) > p_tol or abs(y_min_given_z_min - current_vert.y) > p_tol or counter == 0) and (
+            counter < stop_limit):
+        min_difference = numpy.pi * 3
+        min_dist = 100000
+        for neigh_z, neigh_y in zip(current_vert.neighbours_z, current_vert.neighbours_y):
+            z_diff_1 = neigh_z - current_vert.z
+            y_diff_1 = neigh_y - current_vert.y
+
+            angle_to_neighbor = numpy.arctan2(z_diff_1, y_diff_1)
+            if angle_to_neighbor < 0:
+                angle_to_neighbor += numpy.pi * 2
+
+            if angle_to_neighbor > angle_previous + 1e-10:
+                difference = angle_to_neighbor - angle_previous
+            else:
+                difference = numpy.pi * 2 - angle_previous + angle_to_neighbor
+
+            if abs(difference - min_difference) < 1e-2:  # if it lies in same direction check distance
+                dist = z_diff_1 ** 2 + y_diff_1 ** 2
+                if dist < min_dist:
+                    min_dist = dist
+                    min_angle = angle_to_neighbor
+                    min_difference = difference
+                    min_neigh_z = neigh_z
+                    min_neigh_y = neigh_y
+            elif difference < min_difference:  # has closer angle in counterclockwise direction
+                min_dist = z_diff_1 ** 2 + y_diff_1 ** 2
+                min_angle = angle_to_neighbor
+                min_difference = difference
+                min_neigh_z = neigh_z
+                min_neigh_y = neigh_y
+
+        pyplot.plot([current_vert.y, min_neigh_y]
+                    , [current_vert.z, min_neigh_z]
+                    , color='black', linewidth=4)
+        pyplot.plot(min_neigh_y, min_neigh_z, 'o', color='red')
+
+        counter += 1
+        angle_previous = (min_angle + numpy.pi) % (2 * numpy.pi)
+        for vertex in outer_vertexes:
+            if vertex.y == min_neigh_y and vertex.z == min_neigh_z:
+                current_vert = vertex
+                break
+    print(counter)
+    pyplot.show()
 
 
 def print_matrix(matrix):
@@ -375,7 +432,7 @@ def print_matrix(matrix):
             g = random.random()
             c = (r, g, b)
             pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color=c, linewidth=3)
-    pyplot.show()
+    # pyplot.show()
 
 
 def find_common(vert1, vert2):
