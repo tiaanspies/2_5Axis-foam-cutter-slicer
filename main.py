@@ -341,7 +341,7 @@ def do_stuff():
             break
 
     print_matrix(outer_vertexes)
-    print("Intersections found")
+    print("Intersections Added")
 
     """---------------Find bottom left and right points-------------------------"""
     z_min_vtx = min(outer_vertexes, key=attrgetter('z'))
