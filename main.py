@@ -6,6 +6,7 @@ from matplotlib import pyplot
 from mpl_toolkits import mplot3d
 import math
 import random
+from operator import attrgetter
 
 p_tol = 0.01
 
@@ -15,6 +16,7 @@ class Vertex:
         self.y = y_p
         self.z = z_p
         self.neighbours_z = neighbours_z
+
         self.neighbours_y = neighbours_y
 
 
@@ -22,9 +24,10 @@ def do_stuff():
     # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('cubev2.stl')
-    your_mesh = mesh.Mesh.from_file('cubev3.stl')
+    # your_mesh = mesh.Mesh.from_file('cubev3.stl')
+    # your_mesh = mesh.Mesh.from_file('cubev4.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
-    # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
+    your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
     """plot stl 3d model--------------------------"""
     # figure3 = pyplot.figure(3)
@@ -42,7 +45,7 @@ def do_stuff():
     # pyplot.title("Stl file displaying")
     # # define plane to project onto ----------------------
     """-------------------------------------------"""
-    plane_normal_theta = math.radians(0)
+    plane_normal_theta = math.radians(90)
     plane_normal_vector = numpy.array([math.cos(plane_normal_theta), math.sin(plane_normal_theta), 0])
     plane_normal_vector[abs(plane_normal_vector) < 1e-15] = 0.0
 
@@ -156,19 +159,20 @@ def do_stuff():
 
             vertexes.append(Vertex(y, z, neigh_y, neigh_z))
 
+    print("Translated data system into class")
+
     # plt.figure(2)
     # for vertex in vertexes:
     #     pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
     #     for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
     #         pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
-    # # pyplot.show()
+    # pyplot.show()
+    # print_matrix(vertexes)
     """delete all interior vertices by checking the following:"""
     # if the two points at end of edge only have one common neighbour then the edge is on the outside
     # therefore both the points are outer vertices
     # If the two points have more than one neighbour in common check which sides of the line the neighbours lie on
     # If all the common neighbours lie on the same side it is also a exterior edge
-
-    print("Translated data system into class")
 
     outer_edges = []
 
@@ -227,13 +231,7 @@ def do_stuff():
                     reconstruct_vert(outer_vertexes, edge_i[0], edge_i[1], edge_o[1])
                 elif edge_i[1] is edge_o[1]:
                     reconstruct_vert(outer_vertexes, edge_i[1], edge_i[0], edge_o[0])
-    # pyplot.figure(5)
-    # for vertex in outer_vertexes:
-    #     pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
-    #     for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
-    #         pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color='red', linewidth=1)
-    #
-    # pyplot.show()
+    # print_matrix(outer_vertexes)
 
     print("Reconstructed outer vertexes using outer edges")
 
@@ -242,8 +240,9 @@ def do_stuff():
     for close_i, close_vtx in enumerate(outer_vertexes):
         far_i = 0
         while True:
-            far_y = close_vtx.neighbours_y[far_i]
-            far_z = close_vtx.neighbours_z[far_i]
+            far_y = outer_vertexes[close_i].neighbours_y[far_i]
+            far_z = outer_vertexes[close_i].neighbours_z[far_i]
+
         # for far_i, (far_y, far_z) in enumerate(zip(close_vtx.neighbours_y, close_vtx.neighbours_z)):
             intersecting_pt_ids = []
             for mid_id, mid_vtx in enumerate(outer_vertexes):
@@ -267,102 +266,115 @@ def do_stuff():
 
                 add_neighbour(outer_vertexes[min_i], close_vtx.y, close_vtx.z)  #
                 add_neighbour(outer_vertexes[min_i], far_y, far_z)
-
-                far_i -= len(intersecting_pt_ids)
-                intersecting_pt_ids.pop(closest_id)
-
                 add_neighbour(outer_vertexes[close_i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
+
+                intersecting_pt_ids.pop(closest_id)
 
                 for i, vert in enumerate(outer_vertexes):
                     if abs(far_y - vert.y) < p_tol and abs(far_z - vert.z) < p_tol:
                         add_neighbour(outer_vertexes[i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
                         delete_neighbours(outer_vertexes, i, [close_i])
                         delete_neighbours(outer_vertexes, close_i, [i])
-                        delete_neighbours(outer_vertexes, close_i, intersecting_pt_ids)
                         break
+
+                # far_i -= 1  # I think should be minus 1
 
             far_i += 1
             if far_i >= len(close_vtx.neighbours_y):
                 break
 
     print("Shortening complete")
+    # print_matrix(outer_vertexes)
+
+    """---------Add intersections as points and neighbours------------------"""
+    first = 0
+    j = 0
+    f_neigh_i = 0
+    while True:  # for first, vert in enumerate(outer_vertexes):
+        for first_neigh_i, (first_neigh_y, first_neigh_z) in enumerate(
+                zip(outer_vertexes[first].neighbours_y, outer_vertexes[first].neighbours_z)):
+            i = 2
+            while True:  # for i in range(first + 1, len(outer_vertexes) - 1):
+                for col_neigh_y, col_neigh_z in zip(outer_vertexes[i].neighbours_y, outer_vertexes[i].neighbours_z):
+
+                    intersect_state, d1, d2 = find_intersection(outer_vertexes[first].y, outer_vertexes[first].z,
+                                                                first_neigh_y, first_neigh_z,
+                                                                outer_vertexes[i].y, outer_vertexes[i].z,
+                                                                col_neigh_y, col_neigh_z)
+                    if intersect_state:
+
+                        for index_j, vert in enumerate(outer_vertexes):
+                            if vert.y == col_neigh_y and vert.z == col_neigh_z:
+                                j = index_j
+                                break
+
+                        for index_j, vert in enumerate(outer_vertexes):
+                            if vert.y == first_neigh_y and vert.z == first_neigh_z:
+                                f_neigh_i = index_j
+                                break
+
+                        new_point_y = outer_vertexes[first].y + d1 * (first_neigh_y - outer_vertexes[first].y)
+                        new_point_z = outer_vertexes[first].z + d1 * (first_neigh_z - outer_vertexes[first].z)
+
+                        new = False
+                        new = new or replace_neighbours(outer_vertexes[first], outer_vertexes[first + 1],
+                                                        new_point_y, new_point_z)
+                        new = new or replace_neighbours(outer_vertexes[f_neigh_i], outer_vertexes[first],
+                                                        new_point_y, new_point_z)
+                        new = new or replace_neighbours(outer_vertexes[i], outer_vertexes[j], new_point_y, new_point_z)
+                        new = new or replace_neighbours(outer_vertexes[j], outer_vertexes[i], new_point_y, new_point_z)
+
+                        if not new:
+                            neighs_y = [outer_vertexes[first].y, outer_vertexes[f_neigh_i].y,
+                                        outer_vertexes[i].y, outer_vertexes[j].y]
+                            neighs_z = [outer_vertexes[first].z, outer_vertexes[f_neigh_i].z,
+                                        outer_vertexes[i].z, outer_vertexes[j].z]
+                            # pyplot.plot(new_point_y, new_point_z, 'o', color='Green')
+                            outer_vertexes.insert(first + 1, Vertex(new_point_y, new_point_z, neighs_y, neighs_z))
+
+                i += 1
+                if i >= len(outer_vertexes):
+                    break
+        first += 1
+        if first >= len(outer_vertexes) - 3:
+            break
+
+    print_matrix(outer_vertexes)
+    print("Intersections found")
+
+    """---------------Find bottom left and right points-------------------------"""
+    z_min_vtx = min(outer_vertexes, key=attrgetter('z'))
+    z_min = z_min_vtx.z
+    z_min_index = outer_vertexes.index(z_min_vtx)
+
+    z_exact = z_min
+    y_max_given_z_min = -1000
+    y_min_given_z_min = 1000
+
+    for vertex in vertexes:
+        if abs(vertex.z - z_min) < p_tol and vertex.y < y_min_given_z_min:
+            y_min_given_z_min = vertex.y
+            z_exact = vertex.z
+
+    for vertex in vertexes:
+        if abs(vertex.z - z_min) < p_tol and vertex.y > y_max_given_z_min:
+            y_max_given_z_min = vertex.y
+            z_exact = vertex.z
+
+
+def print_matrix(matrix):
     pyplot.figure(6)
-    r = random.random()
-    b = random.random()
-    g = random.random()
-    c = (r, g, b)
-    for vertex in outer_vertexes:
+    for vertex in matrix:
         pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
+        if abs(vertex.y - -48.5) < 0.1 and abs(vertex.z - 54) < 0.1:
+            print("hiii")
         for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
-            pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color=c, linewidth=3)
             r = random.random()
             b = random.random()
             g = random.random()
             c = (r, g, b)
-
+            pyplot.plot([vertex.y, neigh_y], [vertex.z, neigh_z], color=c, linewidth=3)
     pyplot.show()
-    """---------------Find bottom left and right points-------------------------"""
-    # z_min = min(vertexes, key=attrgetter('z')).z
-    #
-    # # y_max_given_z_min = points_2d_y[z_min_index]  # select initial z to compare rest with
-    # # y_left_given_z_min = points_2d_y[z_min_index]
-    # z_exact = z_min
-    # y_max_given_z_min = -1000
-    # y_min_given_z_min = 1000
-    #
-    # for vertex in vertexes:
-    #     if abs(vertex.z - z_min) < 0.1 and vertex.y < y_min_given_z_min:
-    #         y_min_given_z_min = vertex.y
-    #         z_exact = vertex.z
-    #
-    # for vertex in vertexes:
-    #     if abs(vertex.z - z_min) < 0.1 and vertex.y > y_max_given_z_min:
-    #         y_max_given_z_min = vertex.y
-    #         z_exact = vertex.z
-
-    """---------Add intersections as points and neighbours------------------"""
-    # p = 0
-    #
-    # while True:  # for p, vert in enumerate(ro_vertexes):
-    #     i = 2
-    #     while True:  # for i in range(p + 1, len(ro_vertexes) - 1):
-    #         for col_neigh_y, col_neigh_z in zip(ro_vertexes[i].neighbours_y, ro_vertexes[i].neighbours_z):
-    #             intersect_state, d1, d2 = find_intersection(ro_vertexes[p].y, ro_vertexes[p].z,
-    #                                                         ro_vertexes[p + 1].y, ro_vertexes[p + 1].z,
-    #                                                         ro_vertexes[i].y, ro_vertexes[i].z,
-    #                                                         col_neigh_y, col_neigh_z)
-    #             if intersect_state:
-    #                 if i < len(ro_vertexes)-1:
-    #                     if ro_vertexes[i + 1].y == col_neigh_y and ro_vertexes[i + 1].z == col_neigh_z:
-    #                         j = i+1
-    #                 else:
-    #                     for index_j, vert in enumerate(ro_vertexes):
-    #                         if vert.y == col_neigh_y and vert.z == col_neigh_y:
-    #                             j = index_j
-    #                             break
-    #
-    #                 new_point_y = ro_vertexes[p].y + d1 * (ro_vertexes[p + 1].y - ro_vertexes[p].y)
-    #                 new_point_z = ro_vertexes[p].z + d1 * (ro_vertexes[p + 1].z - ro_vertexes[p].z)
-    #
-    #                 new = False
-    #                 new = new or replace_neighbours(ro_vertexes[p], ro_vertexes[p + 1], new_point_y, new_point_z)
-    #                 new = new or replace_neighbours(ro_vertexes[p + 1], ro_vertexes[p], new_point_y, new_point_z)
-    #                 new = new or replace_neighbours(ro_vertexes[i], ro_vertexes[j], new_point_y, new_point_z)
-    #                 new = new or replace_neighbours(ro_vertexes[j], ro_vertexes[i], new_point_y, new_point_z)
-    #
-    #                 if not new:
-    #                     neighs_y = [ro_vertexes[p].y, ro_vertexes[p + 1].y, ro_vertexes[i].y, ro_vertexes[j].y]
-    #                     neighs_z = [ro_vertexes[p].z, ro_vertexes[p + 1].z, ro_vertexes[i].z, ro_vertexes[j].z]
-    #                     pyplot.plot(new_point_y, new_point_z, 'o', color='Green')
-    #                     ro_vertexes.insert(p + 1, Vertex(new_point_y, new_point_z, neighs_y, neighs_z))
-    #
-    #         i += 1
-    #         if i >= len(ro_vertexes):
-    #             break
-    #     p += 1
-    #     if p >= len(ro_vertexes) - 3:
-    #         break
-    # pyplot.show()
 
 
 def find_common(vert1, vert2):
@@ -390,12 +402,16 @@ def delete_neighbours(vertexes, main_id, to_del_ids):
     if len(to_del_ids) == 0:
         return None
 
+    count = 0
     for del_id in to_del_ids:
         for i, (y, z) in enumerate(zip(vertexes[main_id].neighbours_y, vertexes[main_id].neighbours_z)):
             if abs(y - vertexes[del_id].y) < p_tol and abs(z - vertexes[del_id].z) < p_tol:
                 vertexes[main_id].neighbours_y.pop(i)
                 vertexes[main_id].neighbours_z.pop(i)
+                count += 1
                 break
+
+    return count
 
 
 def reconstruct_vert(vertexes, pt_com, pt_1, pt_2):
