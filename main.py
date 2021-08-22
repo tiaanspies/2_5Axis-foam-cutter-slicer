@@ -8,7 +8,7 @@ import math
 import random
 from operator import attrgetter
 
-p_tol = 0.01
+p_tol = 0.001
 
 
 class Vertex:
@@ -21,13 +21,13 @@ class Vertex:
 
 
 def do_stuff():
-    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
+    # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('cubev2.stl')
     # your_mesh = mesh.Mesh.from_file('cubev3.stl')
     # your_mesh = mesh.Mesh.from_file('cubev4.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
-    # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
+    your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
     """plot stl 3d model--------------------------"""
     # figure3 = pyplot.figure(3)
@@ -369,7 +369,7 @@ def do_stuff():
     min_neigh_y = current_vert.neighbours_y[0]
 
     counter = 0
-    stop_limit = 200
+    stop_limit = 500
     angle_previous = numpy.deg2rad(180)
     pyplot.figure(6)
     print_matrix(outer_vertexes)
