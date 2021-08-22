@@ -20,7 +20,8 @@ class Vertex:
         self.neighbours_y = neighbours_y
 
 
-def do_stuff():
+def do_stuff(model_angle):
+
     # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('cubev2.stl')
@@ -45,7 +46,7 @@ def do_stuff():
     # pyplot.title("Stl file displaying")
     # # define plane to project onto ----------------------
     """-------------------------------------------"""
-    plane_normal_theta = math.radians(90)
+    plane_normal_theta = math.radians(model_angle)
     plane_normal_vector = numpy.array([math.cos(plane_normal_theta), math.sin(plane_normal_theta), 0])
     plane_normal_vector[abs(plane_normal_vector) < 1e-15] = 0.0
 
@@ -53,7 +54,8 @@ def do_stuff():
     # theta = np.arctan2(n[1], n[0])  # orientation of plane
 
     plane_normal_vector_normalized = plane_normal_vector / np.linalg.norm(plane_normal_vector)
-    print("start")
+    print("\n-----------start-------------------")
+    print("Angle:", model_angle)
     """project all points onto the plane------"""
 
     points_on_plane = np.zeros([len(your_mesh.vectors), 3, 3])
@@ -236,62 +238,94 @@ def do_stuff():
     print("Reconstructed outer vertexes using outer edges")
 
     """chain neighbours on straight lines instead of them jumping over multiple vertices"""
-
-    for close_i, close_vtx in enumerate(outer_vertexes):
-        far_i = 0
+    did_shorten = True
+    count = 0
+    while did_shorten and count < 15:
+        count += 1
+        print("Shortening iteration: ", count)
+        # for close_i, close_vtx in enumerate(outer_vertexes):
+        did_shorten = False
+        close_i = 0
         while True:
-            far_y = outer_vertexes[close_i].neighbours_y[far_i]
-            far_z = outer_vertexes[close_i].neighbours_z[far_i]
-
-        # for far_i, (far_y, far_z) in enumerate(zip(close_vtx.neighbours_y, close_vtx.neighbours_z)):
-            intersecting_pt_ids = []
-            for mid_id, mid_vtx in enumerate(outer_vertexes):
-                if mid_id == close_i:
+            close_vtx = outer_vertexes[close_i]
+            far_i = 0
+            while True:
+                if len(outer_vertexes[close_i].neighbours_z) == 0:
+                    close_i += 1
+                    far_i = 0
                     continue
 
-                if sq_shortest_dist_to_point(close_vtx.y, close_vtx.z, far_y, far_z, mid_vtx.y, mid_vtx.z) < 0.01:
-                    if is_c_between(close_vtx.y, close_vtx.z, far_y, far_z, mid_vtx.y, mid_vtx.z):
-                        intersecting_pt_ids.append(mid_id)
+                far_y = outer_vertexes[close_i].neighbours_y[far_i]
+                far_z = outer_vertexes[close_i].neighbours_z[far_i]
 
-            if len(intersecting_pt_ids) > 0:
-                min_dist = 1000000
-                min_i = intersecting_pt_ids[0]
-                closest_id = 0
-                for index, pt in enumerate(intersecting_pt_ids):
-                    d2 = (outer_vertexes[pt].y-close_vtx.y)**2 + (outer_vertexes[pt].z-close_vtx.z)**2
-                    if d2 < min_dist:
-                        min_dist = d2
-                        min_i = pt
-                        closest_id = index
-
-                add_neighbour(outer_vertexes[min_i], close_vtx.y, close_vtx.z)  #
-                add_neighbour(outer_vertexes[min_i], far_y, far_z)
-                add_neighbour(outer_vertexes[close_i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
-
-                intersecting_pt_ids.pop(closest_id)
-
-                for i, vert in enumerate(outer_vertexes):
-                    if abs(far_y - vert.y) < p_tol and abs(far_z - vert.z) < p_tol:
-                        add_neighbour(outer_vertexes[i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
-                        delete_neighbours(outer_vertexes, i, [close_i])
-                        delete_neighbours(outer_vertexes, close_i, [i])
+                # for far_i, (far_y, far_z) in enumerate(zip(close_vtx.neighbours_y, close_vtx.neighbours_z)):
+                intersecting_pt_ids = []
+                mid_id = 0
+                # for mid_id, mid_vtx in enumerate(outer_vertexes):
+                while True:
+                    if mid_id >= len(outer_vertexes):
                         break
 
-                # far_i -= 1  # I think should be minus 1
+                    mid_vtx = outer_vertexes[mid_id]
+                    if mid_id == close_i:
+                        mid_id += 1
+                        continue
 
-            far_i += 1
-            if far_i >= len(close_vtx.neighbours_y):
+                    if sq_shortest_dist_to_point(close_vtx.y, close_vtx.z, far_y, far_z, mid_vtx.y, mid_vtx.z) < 0.01:
+                        if is_c_between(close_vtx.y, close_vtx.z, far_y, far_z, mid_vtx.y, mid_vtx.z):
+                            intersecting_pt_ids.append(mid_id)
+
+                    mid_id += 1
+
+                if len(intersecting_pt_ids) > 0:
+                    did_shorten = True
+
+                    min_dist = 1000000
+                    min_i = intersecting_pt_ids[0]
+                    closest_id = 0
+                    for index, pt in enumerate(intersecting_pt_ids):
+                        d2 = (outer_vertexes[pt].y - close_vtx.y) ** 2 + (outer_vertexes[pt].z - close_vtx.z) ** 2
+                        if d2 < min_dist:
+                            min_dist = d2
+                            min_i = pt
+                            closest_id = index
+
+                    add_neighbour(outer_vertexes[min_i], close_vtx.y, close_vtx.z)  #
+                    add_neighbour(outer_vertexes[min_i], far_y, far_z)
+                    insert_neighbour(outer_vertexes[close_i], outer_vertexes[min_i].y,
+                                     outer_vertexes[min_i].z, far_i)
+
+                    intersecting_pt_ids.pop(closest_id)
+
+                    early_delete_count = 0
+                    for i, vert in enumerate(outer_vertexes):
+                        if abs(far_y - vert.y) < p_tol and abs(far_z - vert.z) < p_tol:
+                            add_neighbour(outer_vertexes[i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
+                            delete_neighbours(outer_vertexes, [i], [close_i], 0)
+                            delete_neighbours(outer_vertexes, intersecting_pt_ids, [close_i], 0)
+                            early_delete_count = delete_neighbours(outer_vertexes, [close_i], [i], far_i)
+                            early_delete_count += delete_neighbours(outer_vertexes, [close_i], intersecting_pt_ids, far_i)
+                            break
+
+                    # print("Early delete", close_i, far_i)
+                    far_i -= early_delete_count  # I think should be minus 1
+                far_i += 1
+                if far_i >= len(close_vtx.neighbours_y):
+                    break
+
+            close_i += 1
+            if close_i >= len(outer_vertexes):
                 break
 
-    print("Shortening complete")
     # print_matrix(outer_vertexes)
-
+    # pyplot.show()
     """---------Add intersections as points and neighbours------------------"""
 
     first = 0
     j = 0
     f_neigh_i = 0
     while True:  # for first, vert in enumerate(outer_vertexes):
+        # print(len(outer_vertexes))
         for first_neigh_i, (first_neigh_y, first_neigh_z) in enumerate(
                 zip(outer_vertexes[first].neighbours_y, outer_vertexes[first].neighbours_z)):
             i = 2
@@ -331,7 +365,7 @@ def do_stuff():
                             neighs_z = [outer_vertexes[first].z, outer_vertexes[f_neigh_i].z,
                                         outer_vertexes[i].z, outer_vertexes[j].z]
                             # pyplot.plot(new_point_y, new_point_z, 'o', color='Green')
-                            outer_vertexes.insert(first + 1, Vertex(new_point_y, new_point_z, neighs_y, neighs_z))
+                            outer_vertexes.insert(first, Vertex(new_point_y, new_point_z, neighs_y, neighs_z))
 
                 i += 1
                 if i >= len(outer_vertexes):
@@ -416,16 +450,15 @@ def do_stuff():
             if vertex.y == min_neigh_y and vertex.z == min_neigh_z:
                 current_vert = vertex
                 break
-    print(counter)
-    pyplot.show()
+    print("Path length: ", counter)
+    plt.show(block=False)
+    plt.pause(0.1)
+    plt.close()
 
 
 def print_matrix(matrix):
-
     for vertex in matrix:
         pyplot.plot(vertex.y, vertex.z, 'o', color='blue')
-        if abs(vertex.y - -48.5) < 0.1 and abs(vertex.z - 54) < 0.1:
-            print("hiii")
         for neigh_z, neigh_y in zip(vertex.neighbours_z, vertex.neighbours_y):
             r = random.random()
             b = random.random()
@@ -455,19 +488,24 @@ def find_vert(vertexes_a, p_y, p_z):
         raise ValueError("NO vertex found")
 
 
-def delete_neighbours(vertexes, main_id, to_del_ids):
-
+def delete_neighbours(vertexes, main_ids, to_del_ids, current_pos):
     if len(to_del_ids) == 0:
-        return None
-
+        return 0
+    # cannot use count if multiple main ids
     count = 0
-    for del_id in to_del_ids:
-        for i, (y, z) in enumerate(zip(vertexes[main_id].neighbours_y, vertexes[main_id].neighbours_z)):
-            if abs(y - vertexes[del_id].y) < p_tol and abs(z - vertexes[del_id].z) < p_tol:
-                vertexes[main_id].neighbours_y.pop(i)
-                vertexes[main_id].neighbours_z.pop(i)
-                count += 1
-                break
+    for main_id in main_ids:
+        length = len(vertexes[main_id].neighbours_y)
+        for i, (y, z) in enumerate(zip(reversed(vertexes[main_id].neighbours_y), reversed(vertexes[main_id].neighbours_z))):
+            j = length - i - 1
+            for del_id in to_del_ids:
+                if abs(y - vertexes[del_id].y) < p_tol and abs(z - vertexes[del_id].z) < p_tol:
+                    vertexes[main_id].neighbours_y.pop(j)
+                    vertexes[main_id].neighbours_z.pop(j)
+
+                    if j <= current_pos:
+                        count += 1
+
+                    break
 
     return count
 
@@ -502,6 +540,7 @@ def add_vertex(vertexes, new_vert):
 
 
 def add_neighbour(vertex, new_y, new_z):
+
     for neigh_y, neigh_z in zip(vertex.neighbours_y, vertex.neighbours_z):
         if abs(neigh_y - new_y) < p_tol and abs(neigh_z - new_z) < p_tol:
             break
@@ -510,6 +549,17 @@ def add_neighbour(vertex, new_y, new_z):
         vertex.neighbours_z.append(new_z)
 
     return None
+
+
+def insert_neighbour(vertex, new_y, new_z, pos):
+    for index, (neigh_y, neigh_z) in enumerate(zip(vertex.neighbours_y, vertex.neighbours_z)):
+        if abs(neigh_y - new_y) < p_tol and abs(neigh_z - new_z) < p_tol:
+            return False
+
+    else:
+        vertex.neighbours_y.insert(pos, new_y)
+        vertex.neighbours_z.insert(pos, new_z)
+    return True
 
 
 def replace_neighbours(vertex, old, new_y, new_z):
@@ -525,9 +575,9 @@ def replace_neighbours(vertex, old, new_y, new_z):
 
 def is_c_between(ay, az, by, bz, cy, cz):
     # Check if c is between a and b
-    d_ab = (ay - by)**2 + (az - bz)**2
-    d_ac = (ay - cy)**2 + (az - cz)**2
-    d_bc = (by - cy)**2 + (bz - cz)**2
+    d_ab = (ay - by) ** 2 + (az - bz) ** 2
+    d_ac = (ay - cy) ** 2 + (az - cz) ** 2
+    d_bc = (by - cy) ** 2 + (bz - cz) ** 2
 
     if max(d_ac, d_bc) > d_ab:
         return False
@@ -587,8 +637,8 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
     else:
         xy = (a0 * (y1 - b1) + a1 * (b0 - y1) + x1 * (b1 - b0)) / denom
         partial = is_between(0, xy, 1)
-    if partial:
-        ab = (y1 * (x0 - a1) + b1 * (x1 - x0) + y0 * (a1 - x1)) / denom
+        if partial:
+            ab = (y1 * (x0 - a1) + b1 * (x1 - x0) + y0 * (a1 - x1)) / denom
 
     if partial and is_between(0, ab, 1) and ab > p_tol and xy > p_tol:
         ab = 1 - ab
@@ -602,4 +652,10 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
 
 
 if __name__ == '__main__':
-    do_stuff()
+    # toolbox bug angle: 341.05263157894734
+    #dog bug angle 75.78947368421052
+    # dog glitch angle 132.6315789473684
+    # 151.57894736842104
+
+    for i in numpy.linspace(0, 360, 20):
+        do_stuff(i)
