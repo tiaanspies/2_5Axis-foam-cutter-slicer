@@ -8,7 +8,7 @@ import math
 import random
 from operator import attrgetter
 
-p_tol = 0.001
+p_tol = 0.1
 
 
 class Vertex:
@@ -21,14 +21,14 @@ class Vertex:
 
 
 def do_stuff(model_angle):
-
-    # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
+    # your_mesh = mesh.Mesh.from_file('Spring_Doorstop_v001.stl')
+    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('cubev2.stl')
     # your_mesh = mesh.Mesh.from_file('cubev3.stl')
     # your_mesh = mesh.Mesh.from_file('cubev4.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
-    your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
+    # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
     """plot stl 3d model--------------------------"""
     # figure3 = pyplot.figure(3)
@@ -46,7 +46,7 @@ def do_stuff(model_angle):
     # pyplot.title("Stl file displaying")
     # # define plane to project onto ----------------------
     """-------------------------------------------"""
-    plane_normal_theta = math.radians(model_angle)
+    plane_normal_theta = math.radians(90)
     plane_normal_vector = numpy.array([math.cos(plane_normal_theta), math.sin(plane_normal_theta), 0])
     plane_normal_vector[abs(plane_normal_vector) < 1e-15] = 0.0
 
@@ -240,7 +240,7 @@ def do_stuff(model_angle):
     """chain neighbours on straight lines instead of them jumping over multiple vertices"""
     did_shorten = True
     count = 0
-    while did_shorten and count < 15:
+    while did_shorten and count < 1:
         count += 1
         print("Shortening iteration: ", count)
         # for close_i, close_vtx in enumerate(outer_vertexes):
@@ -257,6 +257,8 @@ def do_stuff(model_angle):
 
                 far_y = outer_vertexes[close_i].neighbours_y[far_i]
                 far_z = outer_vertexes[close_i].neighbours_z[far_i]
+
+                far_dist = (close_vtx.y - far_y)**2 + (close_vtx.z - far_z)**2
 
                 # for far_i, (far_y, far_z) in enumerate(zip(close_vtx.neighbours_y, close_vtx.neighbours_z)):
                 intersecting_pt_ids = []
@@ -291,16 +293,45 @@ def do_stuff(model_angle):
                             closest_id = index
 
                     add_neighbour(outer_vertexes[min_i], close_vtx.y, close_vtx.z)  #
-                    add_neighbour(outer_vertexes[min_i], far_y, far_z)
+                    # add_neighbour(outer_vertexes[min_i], far_y, far_z)
                     insert_neighbour(outer_vertexes[close_i], outer_vertexes[min_i].y,
                                      outer_vertexes[min_i].z, far_i)
 
                     intersecting_pt_ids.pop(closest_id)
 
+                    mid_neighs_y = []
+                    mid_neighs_z = []
+                    far_neighs_y = []
+                    far_neighs_z = []
+
                     early_delete_count = 0
                     for i, vert in enumerate(outer_vertexes):
                         if abs(far_y - vert.y) < p_tol and abs(far_z - vert.z) < p_tol:
-                            add_neighbour(outer_vertexes[i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
+                            for vert_neigh_y, vert_neigh_z in zip(vert.neighbours_y, vert.neighbours_z):
+                                if is_c_between(outer_vertexes[min_i].y, outer_vertexes[min_i].z, vert.y, vert.z, vert_neigh_y, vert_neigh_z):
+                                    mid_neighs_y.append(vert_neigh_y)
+                                    mid_neighs_z.append(vert_neigh_z)
+
+                            for vert_neigh_y, vert_neigh_z in zip(outer_vertexes[min_i].neighbours_y,
+                                                                  outer_vertexes[min_i].neighbours_z):
+                                if is_c_between(outer_vertexes[min_i].y, outer_vertexes[min_i].z, far_y, far_z, vert_neigh_y, vert_neigh_z):
+                                    far_neighs_y.append(vert_neigh_y)
+                                    far_neighs_z.append(vert_neigh_z)
+
+                            common_neighbor_in_between = False
+                            for vert_neigh_y, vert_neigh_z in zip(far_neighs_y,
+                                                                  far_neighs_z):
+                                if vert_neigh_z in mid_neighs_z and vert_neigh_y in mid_neighs_y:
+                                    for common_i, common_vert in enumerate(outer_vertexes):
+                                        if abs(vert_neigh_y - common_vert.y) < p_tol and abs(vert_neigh_y - common_vert.z) < p_tol:
+                                            add_neighbour(outer_vertexes[common_i], far_y, far_z)
+                                            add_neighbour(outer_vertexes[common_i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
+                                    common_neighbor_in_between = True
+
+                            if not common_neighbor_in_between:
+                                add_neighbour(outer_vertexes[min_i], far_y, far_z)
+                                add_neighbour(outer_vertexes[i], outer_vertexes[min_i].y, outer_vertexes[min_i].z)
+
                             delete_neighbours(outer_vertexes, [i], [close_i], 0)
                             delete_neighbours(outer_vertexes, intersecting_pt_ids, [close_i], 0)
                             early_delete_count = delete_neighbours(outer_vertexes, [close_i], [i], far_i)
@@ -308,7 +339,7 @@ def do_stuff(model_angle):
                             break
 
                     # print("Early delete", close_i, far_i)
-                    far_i -= early_delete_count  # I think should be minus 1
+                    far_i -= early_delete_count
                 far_i += 1
                 if far_i >= len(close_vtx.neighbours_y):
                     break
@@ -317,8 +348,8 @@ def do_stuff(model_angle):
             if close_i >= len(outer_vertexes):
                 break
 
-    # print_matrix(outer_vertexes)
-    # pyplot.show()
+    print_matrix(outer_vertexes)
+    pyplot.show()
     """---------Add intersections as points and neighbours------------------"""
 
     first = 0
@@ -374,7 +405,8 @@ def do_stuff(model_angle):
         if first >= len(outer_vertexes) - 3:
             break
 
-    # print_matrix(outer_vertexes)
+    print_matrix(outer_vertexes)
+    pyplot.show()
     print("Intersections Added")
 
     """---------------Find bottom left and right points-------------------------"""
@@ -451,9 +483,10 @@ def do_stuff(model_angle):
                 current_vert = vertex
                 break
     print("Path length: ", counter)
-    plt.show(block=False)
-    plt.pause(0.1)
-    plt.close()
+    plt.show()
+    # plt.show(block=False)
+    # plt.pause(1)
+    # plt.close()
 
 
 def print_matrix(matrix):
@@ -653,9 +686,10 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
 
 if __name__ == '__main__':
     # toolbox bug angle: 341.05263157894734
-    #dog bug angle 75.78947368421052
+    # dog bug angle 75.78947368421052
     # dog glitch angle 132.6315789473684
     # 151.57894736842104
+    # Angle: 208.42105263157893
 
-    for i in numpy.linspace(0, 360, 20):
-        do_stuff(i)
+    # for t in numpy.linspace(0, 360, 20):
+    do_stuff(0)
