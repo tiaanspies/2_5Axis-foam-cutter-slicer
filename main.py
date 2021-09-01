@@ -21,7 +21,7 @@ class Vertex:
 
 
 def do_stuff(model_angle):
-    # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
+    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('cubev2.stl')
     # your_mesh = mesh.Mesh.from_file('cubev3.stl')
