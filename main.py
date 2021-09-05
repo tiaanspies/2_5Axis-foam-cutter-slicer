@@ -21,12 +21,12 @@ class Vertex:
 
 
 def do_stuff(model_angle):
-    your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
+    # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('cubev2.stl')
     # your_mesh = mesh.Mesh.from_file('cubev3.stl')
     # your_mesh = mesh.Mesh.from_file('cubev4.stl')
-    # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
+    your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
     """plot stl 3d model--------------------------"""
@@ -232,7 +232,8 @@ def do_stuff(model_angle):
                     reconstruct_vert(outer_vertexes, edge_i[0], edge_i[1], edge_o[1])
                 elif edge_i[1] is edge_o[1]:
                     reconstruct_vert(outer_vertexes, edge_i[1], edge_i[0], edge_o[0])
-    # print_matrix(outer_vertexes)
+    print_matrix(outer_vertexes)
+    pyplot.show()
 
     print("Reconstructed outer vertexes using outer edges")
 
@@ -248,7 +249,7 @@ def do_stuff(model_angle):
             y_max_given_z_min = vertex.y
             bottom_right_index = index
 
-    queue = [bottom_right_index]
+    queue = [bottom_right_index]  # index of next vertex to check
     completed_list_y = []
     completed_list_z = []
     while len(queue) > 0:
@@ -260,12 +261,25 @@ def do_stuff(model_angle):
                 if neigh_id not in queue:
                     queue.append(neigh_id)
 
+        pyplot.plot(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z, 'o', color='blue', markersize=1)
+        for neigh_z, neigh_y in zip(outer_vertexes[queue[0]].neighbours_z, outer_vertexes[queue[0]].neighbours_y):
+            r = random.random()
+            b = random.random()
+            g = random.random()
+            c = (r, g, b)
+            # pyplot.plot([outer_vertexes[queue[0]].y, neigh_y],
+            #             [outer_vertexes[queue[0]].z, neigh_z], color=c, linewidth=3)
+            pyplot.arrow(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z, -outer_vertexes[queue[0]].y + neigh_y,
+                         -outer_vertexes[queue[0]].z + neigh_z, color=c, width=0.1, shape='right',
+                         head_starts_at_zero=False, length_includes_head=True)
+            # pyplot.clf()
+            # pyplot.show()
         queue.pop(0)
 
-    print_matrix(outer_vertexes)
     pyplot.show()
-    """---------Add intersections as points and neighbours------------------"""
+    # print_matrix(outer_vertexes)
 
+    """---------Add intersections as points and neighbours------------------"""
     first = 0
     j = 0
     f_neigh_i = 0
@@ -339,6 +353,8 @@ def do_stuff(model_angle):
             y_max_given_z_min = vertex.y
             bottom_right_index = index
 
+    """----Follow outline around right hand side--------"""
+
     min_angle = 10
     current_vert = outer_vertexes[bottom_right_index]
 
@@ -352,7 +368,7 @@ def do_stuff(model_angle):
     print_matrix(outer_vertexes)
     while (abs(z_min - current_vert.z) > p_tol or abs(y_min_given_z_min - current_vert.y) > p_tol or counter == 0) and (
             counter < stop_limit):
-        min_difference = numpy.pi * 3
+        min_difference = 10
         min_dist = 100000
         for neigh_z, neigh_y in zip(current_vert.neighbours_z, current_vert.neighbours_y):
             z_diff_1 = neigh_z - current_vert.z
@@ -362,12 +378,18 @@ def do_stuff(model_angle):
             if angle_to_neighbor < 0:
                 angle_to_neighbor += numpy.pi * 2
 
-            if angle_to_neighbor > angle_previous + 1e-10:
+            if angle_to_neighbor > angle_previous:  # make sure angle is always positive
                 difference = angle_to_neighbor - angle_previous
             else:
                 difference = numpy.pi * 2 - angle_previous + angle_to_neighbor
 
-            if abs(difference - min_difference) < 1e-2:  # if it lies in same direction check distance
+            if difference < min_difference - 1e-4:  # has closer angle in counterclockwise direction
+                min_dist = z_diff_1 ** 2 + y_diff_1 ** 2
+                min_angle = angle_to_neighbor
+                min_difference = difference
+                min_neigh_z = neigh_z
+                min_neigh_y = neigh_y
+            elif abs(difference - min_difference) < 1e-4:  # if it lies in same direction check distance
                 dist = z_diff_1 ** 2 + y_diff_1 ** 2
                 if dist < min_dist:
                     min_dist = dist
@@ -375,12 +397,6 @@ def do_stuff(model_angle):
                     min_difference = difference
                     min_neigh_z = neigh_z
                     min_neigh_y = neigh_y
-            elif difference < min_difference:  # has closer angle in counterclockwise direction
-                min_dist = z_diff_1 ** 2 + y_diff_1 ** 2
-                min_angle = angle_to_neighbor
-                min_difference = difference
-                min_neigh_z = neigh_z
-                min_neigh_y = neigh_y
 
         pyplot.plot([current_vert.y, min_neigh_y],
                     [current_vert.z, min_neigh_z],
@@ -395,18 +411,19 @@ def do_stuff(model_angle):
                 break
     print("Path length: ", counter)
     plt.show()
-    plt.show(block=False)
-    plt.pause(0.1)
-    plt.close()
+    # plt.show(block=False)
+    # plt.pause(3)
+    # plt.close()
 
 
 def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_vert_list_z):
     directions = []
     max_distances = []  # max for each direction
-    points_sorted_by_direction_y = []
+    points_sorted_by_direction_y = []  # all the y values for points in current direction. Each row is a
+    # different direction
     points_sorted_by_direction_z = []
     points_sorted_by_direction_ids = []
-    max_dist = 0  # max for all directions
+    max_dist = -1  # max for all directions
 
     # create list with unique directions
     # create point lists with rows corresponding to unique directions and columns all points in that direction
@@ -437,6 +454,7 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
 
             if dist_sq > max_distances[pos_in_list]:
                 max_distances[pos_in_list] = dist_sq
+
     if len(max_distances) > 0:
         max_dist = max(max_distances)
 
@@ -456,12 +474,14 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
 
         if dist_sq < max_dist:  # check that point is within max dist circle
             current_dir = numpy.arctan2(z_diff, y_diff)
-            pos_in_list = where_num_in_list(directions, current_dir)
+            pos_in_list = where_num_in_list(directions, current_dir)  # position of direction
             if pos_in_list > -1 and dist_sq < max_distances[pos_in_list]:
-                # point matches a direction and is within max dist
-                points_sorted_by_direction_y[pos_in_list].append(pt.y)
-                points_sorted_by_direction_z[pos_in_list].append(pt.z)
-                points_sorted_by_direction_ids[pos_in_list].append(pt_id)
+                if is_coord_in_lists(pt.y, pt.z, points_sorted_by_direction_y[pos_in_list],
+                                     points_sorted_by_direction_z[pos_in_list]) is None:
+                    # point matches a direction and is within max dist and isnt neighbor
+                    points_sorted_by_direction_y[pos_in_list].append(pt.y)
+                    points_sorted_by_direction_z[pos_in_list].append(pt.z)
+                    points_sorted_by_direction_ids[pos_in_list].append(pt_id)
 
     if len(points_sorted_by_direction_z) == 0:
         return False
@@ -500,6 +520,7 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
         # add target to shortest
         add_neighbour(vert_list[closest_id], vert_list[trgt_index].y, vert_list[trgt_index].z)
 
+        # delete all points in direction from target index then add closest
         delete_neighbours(vert_list, [trgt_index], points_sorted_by_direction_ids[dir_i], 0)
         add_neighbour(vert_list[trgt_index], closest_y, closest_z)
 
@@ -518,6 +539,14 @@ def is_coord_in_lists(y, z, list_y, list_z):
 
 
 def find_pt(vertex_list, pt_y, pt_z):
+    """
+    Finds index of pt in list
+    Returns none if points not found
+    :param vertex_list:
+    :param pt_y:
+    :param pt_z:
+    :return:
+    """
     for index, vertex in enumerate(vertex_list):
         if abs(vertex.z - pt_z) < p_tol and abs(vertex.y - pt_y) < p_tol:
             return index, vertex
@@ -526,6 +555,8 @@ def find_pt(vertex_list, pt_y, pt_z):
 
 
 def where_num_in_list(num_list, number):
+    # Returns -1 if number not found
+    # Returns index of number within a tolerance of 0.0001 of number
     for i, p in enumerate(num_list):
         if abs(p - number) < 0.0001:
             return i
@@ -558,6 +589,14 @@ def find_common(vert1, vert2):
 
 
 def find_vert(vertexes_a, p_y, p_z):
+    """
+    Returns index if number within tolerance\n
+    Returns Error if number not found
+    :param vertexes_a: List to search in
+    :param p_y: Y co-ord
+    :param p_z:Z co-ord
+    :return: index in list
+    """
     for index, vert in enumerate(vertexes_a):
         if abs(vert.y - p_y) < p_tol and abs(vert.z - p_z) < p_tol:
             return index
@@ -566,6 +605,14 @@ def find_vert(vertexes_a, p_y, p_z):
 
 
 def delete_neighbours(vertexes, main_ids, to_del_ids, current_pos):
+    """
+    Removes neighbours from vertex that match points in list
+    :param vertexes: array of vertexes
+    :param main_ids: indexes of points which will have neighbours removed
+    :param to_del_ids: indexes neighbours that have to be removed
+    :param current_pos:
+    :return:
+    """
     if len(to_del_ids) == 0:
         return 0
     # cannot use count if multiple main ids
