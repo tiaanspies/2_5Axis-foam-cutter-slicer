@@ -232,8 +232,8 @@ def do_stuff(model_angle):
                     reconstruct_vert(outer_vertexes, edge_i[0], edge_i[1], edge_o[1])
                 elif edge_i[1] is edge_o[1]:
                     reconstruct_vert(outer_vertexes, edge_i[1], edge_i[0], edge_o[0])
-    print_matrix(outer_vertexes)
-    pyplot.show()
+    # print_matrix(outer_vertexes)
+    # pyplot.show()
 
     print("Reconstructed outer vertexes using outer edges")
 
@@ -261,7 +261,7 @@ def do_stuff(model_angle):
                 if neigh_id not in queue:
                     queue.append(neigh_id)
 
-        pyplot.plot(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z, 'o', color='blue', markersize=1)
+        # pyplot.plot(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z, 'o', color='blue', markersize=1)
         for neigh_z, neigh_y in zip(outer_vertexes[queue[0]].neighbours_z, outer_vertexes[queue[0]].neighbours_y):
             r = random.random()
             b = random.random()
@@ -269,14 +269,15 @@ def do_stuff(model_angle):
             c = (r, g, b)
             # pyplot.plot([outer_vertexes[queue[0]].y, neigh_y],
             #             [outer_vertexes[queue[0]].z, neigh_z], color=c, linewidth=3)
-            pyplot.arrow(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z, -outer_vertexes[queue[0]].y + neigh_y,
-                         -outer_vertexes[queue[0]].z + neigh_z, color=c, width=0.1, shape='right',
-                         head_starts_at_zero=False, length_includes_head=True)
+
+            # pyplot.arrow(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z, -outer_vertexes[queue[0]].y + neigh_y,
+            #              -outer_vertexes[queue[0]].z + neigh_z, color=c, width=0.1, shape='right',
+            #              head_starts_at_zero=False, length_includes_head=True)
             # pyplot.clf()
             # pyplot.show()
         queue.pop(0)
 
-    pyplot.show()
+    # pyplot.show()
     # print_matrix(outer_vertexes)
 
     """---------Add intersections as points and neighbours------------------"""
@@ -460,12 +461,11 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
 
     # add points that arent neighbours
     for pt_id, pt in enumerate(vert_list):
-
         if is_coord_in_lists(pt.y, pt.z, completed_vert_list_y, completed_vert_list_z):
             continue
 
-        z_diff = vert_list[trgt_index].z - pt.z
-        y_diff = vert_list[trgt_index].y - pt.y
+        z_diff = pt.z - vert_list[trgt_index].z
+        y_diff = pt.y - vert_list[trgt_index].y
 
         if z_diff == 0 and y_diff == 0:  # current pt matched trgt pt
             continue
@@ -477,7 +477,7 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
             pos_in_list = where_num_in_list(directions, current_dir)  # position of direction
             if pos_in_list > -1 and dist_sq < max_distances[pos_in_list]:
                 if is_coord_in_lists(pt.y, pt.z, points_sorted_by_direction_y[pos_in_list],
-                                     points_sorted_by_direction_z[pos_in_list]) is None:
+                                     points_sorted_by_direction_z[pos_in_list]) is False:
                     # point matches a direction and is within max dist and isnt neighbor
                     points_sorted_by_direction_y[pos_in_list].append(pt.y)
                     points_sorted_by_direction_z[pos_in_list].append(pt.z)
@@ -537,6 +537,12 @@ def is_coord_in_lists(y, z, list_y, list_z):
     else:
         return False
 
+
+def make_angle_positive(theta):
+    if theta < 0:
+        return theta + 2*numpy.pi
+    else:
+        return theta
 
 def find_pt(vertex_list, pt_y, pt_z):
     """
