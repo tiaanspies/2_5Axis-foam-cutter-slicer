@@ -3,7 +3,7 @@ import numpy
 import numpy as np
 from stl import mesh
 from matplotlib import pyplot
-from mpl_toolkits import mplot3d
+# from mpl_toolkits import mplot3d
 import math
 import random
 from operator import attrgetter
@@ -194,8 +194,8 @@ def do_stuff(model_angle):
                     c = (vertexes[vert_2_index].z - each_vertex.z) * each_vertex.y - \
                         (vertexes[vert_2_index].y - each_vertex.y) * each_vertex.z
 
-                    f = a * y + b * z + c
-                    if f < 0:
+                    d = a * y + b * z + c
+                    if d < 0:
                         sign = -1
                     else:
                         sign = 1
@@ -261,20 +261,20 @@ def do_stuff(model_angle):
                 if neigh_id not in queue:
                     queue.append(neigh_id)
 
-        # pyplot.plot(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z, 'o', color='blue', markersize=1)
-        for neigh_z, neigh_y in zip(outer_vertexes[queue[0]].neighbours_z, outer_vertexes[queue[0]].neighbours_y):
-            r = random.random()
-            b = random.random()
-            g = random.random()
-            c = (r, g, b)
-            # pyplot.plot([outer_vertexes[queue[0]].y, neigh_y],
-            #             [outer_vertexes[queue[0]].z, neigh_z], color=c, linewidth=3)
-
-            # pyplot.arrow(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z, -outer_vertexes[queue[0]].y + neigh_y,
-            #              -outer_vertexes[queue[0]].z + neigh_z, color=c, width=0.1, shape='right',
-            #              head_starts_at_zero=False, length_includes_head=True)
-            # pyplot.clf()
-            # pyplot.show()
+        # for neigh_z, neigh_y in zip(outer_vertexes[queue[0]].neighbours_z, outer_vertexes[queue[0]].neighbours_y):
+        #     r = random.random()
+        #     b = random.random()
+        #     g = random.random()
+        #     c = (r, g, b)
+        #     # pyplot.plot([outer_vertexes[queue[0]].y, neigh_y],
+        #     #             [outer_vertexes[queue[0]].z, neigh_z], color=c, linewidth=3)
+        #
+        #     pyplot.arrow(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z,
+        #                  -outer_vertexes[queue[0]].y + neigh_y,
+        #                  -outer_vertexes[queue[0]].z + neigh_z, color=c, width=0.1, shape='right',
+        #                  head_starts_at_zero=False, length_includes_head=True)
+        #
+        # pyplot.plot(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z, 'o', color='blue', markersize=2)
         queue.pop(0)
 
     # pyplot.show()
@@ -355,15 +355,15 @@ def do_stuff(model_angle):
             bottom_right_index = index
 
     """----Follow outline around right hand side--------"""
-
     min_angle = 10
     current_vert = outer_vertexes[bottom_right_index]
+    previous_vert = current_vert
 
     min_neigh_z = current_vert.neighbours_z[0]
     min_neigh_y = current_vert.neighbours_y[0]
 
     counter = 0
-    stop_limit = 50
+    stop_limit = 200
     angle_previous = numpy.deg2rad(180)
     pyplot.figure(6)
     print_matrix(outer_vertexes)
@@ -371,7 +371,11 @@ def do_stuff(model_angle):
             counter < stop_limit):
         min_difference = 10
         min_dist = 100000
+
         for neigh_z, neigh_y in zip(current_vert.neighbours_z, current_vert.neighbours_y):
+            if neigh_y == previous_vert.y and neigh_z == previous_vert.z:
+                continue
+
             z_diff_1 = neigh_z - current_vert.z
             y_diff_1 = neigh_y - current_vert.y
 
@@ -406,15 +410,16 @@ def do_stuff(model_angle):
 
         counter += 1
         angle_previous = (min_angle + numpy.pi) % (2 * numpy.pi)
+        previous_vert = current_vert
         for vertex in outer_vertexes:
             if vertex.y == min_neigh_y and vertex.z == min_neigh_z:
                 current_vert = vertex
                 break
     print("Path length: ", counter)
-    plt.show()
-    # plt.show(block=False)
-    # plt.pause(3)
-    # plt.close()
+    # plt.show()
+    plt.show(block=False)
+    plt.pause(3)
+    plt.close()
 
 
 def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_vert_list_z):
@@ -430,15 +435,18 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
     # create point lists with rows corresponding to unique directions and columns all points in that direction
     for neigh_id, (neigh_y, neigh_z) in enumerate(zip(vert_list[trgt_index].neighbours_y,
                                                       vert_list[trgt_index].neighbours_z)):
-        if is_coord_in_lists(neigh_y, neigh_z, completed_vert_list_y, completed_vert_list_z):
-            continue
+        # if is_coord_in_lists(neigh_y, neigh_z, completed_vert_list_y, completed_vert_list_z):
+        #     continue
+
+        # if abs(vert_list[trgt_index].y - 71.728687) < p_tol and abs(vert_list[trgt_index].z - 54) < p_tol:
+        #     print("Hey ho")
 
         z_diff = neigh_z - vert_list[trgt_index].z
         y_diff = neigh_y - vert_list[trgt_index].y
 
         dist_sq = z_diff ** 2 + y_diff ** 2
 
-        current_dir = numpy.arctan2(z_diff, y_diff)
+        current_dir = make_angle_positive(numpy.arctan2(z_diff, y_diff))
         pos_in_list = where_num_in_list(directions, current_dir)
 
         neigh_full_id = find_vert(vert_list, neigh_y, neigh_z)
@@ -473,7 +481,7 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
         dist_sq = z_diff ** 2 + y_diff ** 2
 
         if dist_sq < max_dist:  # check that point is within max dist circle
-            current_dir = numpy.arctan2(z_diff, y_diff)
+            current_dir = make_angle_positive(numpy.arctan2(z_diff, y_diff))
             pos_in_list = where_num_in_list(directions, current_dir)  # position of direction
             if pos_in_list > -1 and dist_sq < max_distances[pos_in_list]:
                 if is_coord_in_lists(pt.y, pt.z, points_sorted_by_direction_y[pos_in_list],
@@ -540,9 +548,10 @@ def is_coord_in_lists(y, z, list_y, list_z):
 
 def make_angle_positive(theta):
     if theta < 0:
-        return theta + 2*numpy.pi
+        return theta + 2 * numpy.pi
     else:
         return theta
+
 
 def find_pt(vertex_list, pt_y, pt_z):
     """
@@ -782,10 +791,6 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
 
 
 if __name__ == '__main__':
-    # toolbox bug angle: 341.05263157894734
-    # dog bug angle 75.78947368421052
-    # dog glitch angle 132.6315789473684
-    # 151.57894736842104
-
-    # for i in numpy.linspace(0, 360, 20):
-    do_stuff(90)
+    # do_stuff(151.57894736842104)
+    for f in numpy.linspace(0, 360, 20):
+        do_stuff(f)
