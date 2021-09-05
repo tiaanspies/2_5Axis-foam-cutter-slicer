@@ -7,6 +7,7 @@ from matplotlib import pyplot
 import math
 import random
 from operator import attrgetter
+import time
 
 p_tol = 0.001
 
@@ -238,6 +239,8 @@ def do_stuff(model_angle):
     print("Reconstructed outer vertexes using outer edges")
 
     """--------chain neighbours on straight lines instead of them jumping over multiple vertices------"""
+    fig = plt.figure(2)
+
     z_min_vtx = min(outer_vertexes, key=attrgetter('z'))
     z_min = z_min_vtx.z
     bottom_right_index = outer_vertexes.index(z_min_vtx)
@@ -253,6 +256,10 @@ def do_stuff(model_angle):
     completed_list_y = []
     completed_list_z = []
     while len(queue) > 0:
+        if abs(outer_vertexes[queue[0]].y - 20.55925) < p_tol and abs(outer_vertexes[queue[0]].z - 54) < p_tol:
+            print("wow")
+        if abs(outer_vertexes[queue[0]].y - 30.40346) < p_tol and abs(outer_vertexes[queue[0]].z - 54) < p_tol:
+            print("wow")
         shorten_algorithm(outer_vertexes, queue[0], completed_list_y, completed_list_z)
 
         for y, z in zip(outer_vertexes[queue[0]].neighbours_y, outer_vertexes[queue[0]].neighbours_z):
@@ -261,26 +268,28 @@ def do_stuff(model_angle):
                 if neigh_id not in queue:
                     queue.append(neigh_id)
 
-        # for neigh_z, neigh_y in zip(outer_vertexes[queue[0]].neighbours_z, outer_vertexes[queue[0]].neighbours_y):
-        #     r = random.random()
-        #     b = random.random()
-        #     g = random.random()
-        #     c = (r, g, b)
-        #     # pyplot.plot([outer_vertexes[queue[0]].y, neigh_y],
-        #     #             [outer_vertexes[queue[0]].z, neigh_z], color=c, linewidth=3)
-        #
-        #     pyplot.arrow(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z,
-        #                  -outer_vertexes[queue[0]].y + neigh_y,
-        #                  -outer_vertexes[queue[0]].z + neigh_z, color=c, width=0.1, shape='right',
-        #                  head_starts_at_zero=False, length_includes_head=True)
-        #
+        for neigh_z, neigh_y in zip(outer_vertexes[queue[0]].neighbours_z, outer_vertexes[queue[0]].neighbours_y):
+            r = random.random()
+            b = random.random()
+            g = random.random()
+            c = (r, g, b)
+            # pyplot.plot([outer_vertexes[queue[0]].y, neigh_y],
+            #             [outer_vertexes[queue[0]].z, neigh_z], color=c, linewidth=3)
+
+            pyplot.arrow(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z,
+                         -outer_vertexes[queue[0]].y + neigh_y,
+                         -outer_vertexes[queue[0]].z + neigh_z, color=c, width=0.1, shape='right',
+                         head_starts_at_zero=False, length_includes_head=True)
+
         # pyplot.plot(outer_vertexes[queue[0]].y, outer_vertexes[queue[0]].z, 'o', color='blue', markersize=2)
+
         queue.pop(0)
 
-    # pyplot.show()
+    pyplot.show()
     # print_matrix(outer_vertexes)
-
+    print("shortened co-linear lines")
     """---------Add intersections as points and neighbours------------------"""
+    plt.figure(3)
     first = 0
     j = 0
     f_neigh_i = 0
@@ -297,6 +306,14 @@ def do_stuff(model_angle):
                                                                 outer_vertexes[i].y, outer_vertexes[i].z,
                                                                 col_neigh_y, col_neigh_z)
                     if intersect_state:
+                        # plt.figure(5)
+                        # pyplot.plot([outer_vertexes[first].y, first_neigh_y],
+                        #             [outer_vertexes[first].z, first_neigh_z], color='red', linewidth=3)
+                        #
+                        # pyplot.plot([outer_vertexes[i].y, col_neigh_y],
+                        #             [outer_vertexes[i].z, col_neigh_z], color='blue', linewidth=2)
+                        # print("AB:", d1, "XY:", d2)
+                        # pyplot.show()
 
                         for index_j, vert in enumerate(outer_vertexes):
                             if vert.y == col_neigh_y and vert.z == col_neigh_z:
@@ -326,7 +343,6 @@ def do_stuff(model_angle):
                                         outer_vertexes[i].z, outer_vertexes[j].z]
                             # pyplot.plot(new_point_y, new_point_z, 'o', color='Green')
                             outer_vertexes.insert(first, Vertex(new_point_y, new_point_z, neighs_y, neighs_z))
-
                 i += 1
                 if i >= len(outer_vertexes):
                     break
@@ -334,7 +350,7 @@ def do_stuff(model_angle):
         if first >= len(outer_vertexes) - 3:
             break
 
-    # print_matrix(outer_vertexes)
+    print_matrix(outer_vertexes)
     print("Intersections Added")
 
     """---------------Find bottom left and right points-------------------------"""
@@ -416,10 +432,10 @@ def do_stuff(model_angle):
                 current_vert = vertex
                 break
     print("Path length: ", counter)
-    # plt.show()
-    plt.show(block=False)
-    plt.pause(3)
-    plt.close()
+    plt.show()
+    # plt.show(block=False)
+    # plt.pause(3)
+    # plt.close()
 
 
 def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_vert_list_z):
@@ -437,9 +453,6 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
                                                       vert_list[trgt_index].neighbours_z)):
         # if is_coord_in_lists(neigh_y, neigh_z, completed_vert_list_y, completed_vert_list_z):
         #     continue
-
-        # if abs(vert_list[trgt_index].y - 71.728687) < p_tol and abs(vert_list[trgt_index].z - 54) < p_tol:
-        #     print("Hey ho")
 
         z_diff = neigh_z - vert_list[trgt_index].z
         y_diff = neigh_y - vert_list[trgt_index].y
@@ -702,11 +715,13 @@ def insert_neighbour(vertex, new_y, new_z, pos):
 
 
 def replace_neighbours(vertex, old, new_y, new_z):
+    """
+    Returns True if it cannot find point in neighbors
+    """
     for index, (neigh_y, neigh_z) in enumerate(zip(vertex.neighbours_y, vertex.neighbours_z)):
         if neigh_y == old.y and neigh_z == old.z:
-            pos = index
-            vertex.neighbours_z[pos] = new_z
-            vertex.neighbours_y[pos] = new_y
+            vertex.neighbours_z[index] = new_z
+            vertex.neighbours_y[index] = new_y
             return False
     else:
         return True
@@ -791,6 +806,8 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
 
 
 if __name__ == '__main__':
-    # do_stuff(151.57894736842104)
-    for f in numpy.linspace(0, 360, 20):
-        do_stuff(f)
+    do_stuff(170.52631578947367)
+    # for f in numpy.linspace(0, 360, 20):
+    #     do_stuff(f)
+    # if abs(outer_vertexes[queue[0]].y - 49.60222) < p_tol and abs(outer_vertexes[queue[0]].z - 29) < p_tol:
+    #     print("eish")
