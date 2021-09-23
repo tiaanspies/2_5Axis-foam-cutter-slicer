@@ -17,20 +17,19 @@ class Vertex:
         self.y = y_p
         self.z = z_p
         self.neighbours_z = neighbours_z
-
         self.neighbours_y = neighbours_y
 
 
-def do_stuff(model_angle):
+def project_outline(model_angle):
     # your_mesh = mesh.Mesh.from_file('Printable_Wrench.A.15.stl')
     # your_mesh = mesh.Mesh.from_file('fago_lapices_1.stl')
     # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('cubev2.stl')
-    # your_mesh = mesh.Mesh.from_file('cubev2_5.stl')
+    your_mesh = mesh.Mesh.from_file('cubev2_5.stl')
     # your_mesh = mesh.Mesh.from_file('cubev3.stl')
     # your_mesh = mesh.Mesh.from_file('cubev4.stl')
-    your_mesh = mesh.Mesh.from_file('cone.stl')
+    # your_mesh = mesh.Mesh.from_file('cone.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
@@ -318,7 +317,7 @@ def do_stuff(model_angle):
                                 break
 
                         for index_j, vert in enumerate(outer_vertexes):
-                            if abs(vert.y - first_neigh_y) <p_tol and abs(vert.z - first_neigh_z) < p_tol:
+                            if abs(vert.y - first_neigh_y) < p_tol and abs(vert.z - first_neigh_z) < p_tol:
                                 f_neigh_i = index_j
                                 break
                         new_point_y = outer_vertexes[first].y + d1 * (first_neigh_y - outer_vertexes[first].y)
@@ -389,6 +388,9 @@ def do_stuff(model_angle):
     """----Follow outline around right hand side--------"""
     pyplot.figure(6)
     pyplot.cla()
+
+    outline_path_y = [y_max_given_z_min]
+    outline_path_z = [z_min]
     # pyplot.xlim([-100, 100])
 
     min_angle = 10
@@ -439,10 +441,10 @@ def do_stuff(model_angle):
                     min_neigh_z = neigh_z
                     min_neigh_y = neigh_y
 
-        pyplot.plot([current_vert.y, min_neigh_y],
-                    [current_vert.z, min_neigh_z],
-                    color='black', linewidth=4)
-        pyplot.plot(min_neigh_y, min_neigh_z, 'o', color='red')
+        # pyplot.plot([current_vert.y, min_neigh_y],
+        #             [current_vert.z, min_neigh_z],
+        #             color='black', linewidth=4)
+        # pyplot.plot(min_neigh_y, min_neigh_z, 'o', color='red')
 
         counter += 1
         angle_previous = (min_angle + numpy.pi) % (2 * numpy.pi)
@@ -451,9 +453,14 @@ def do_stuff(model_angle):
             if vertex.y == min_neigh_y and vertex.z == min_neigh_z:
                 current_vert = vertex
                 break
+
+        outline_path_y.append(current_vert.y)
+        outline_path_z.append(current_vert.z)
+
     print("Path length: ", counter)
-    pyplot.draw()
-    pyplot.pause(1)
+    return outline_path_y, outline_path_z
+    # pyplot.draw()
+    # pyplot.pause(1)
     # plt.show()
     # plt.show(block=False)
     # plt.pause(3)
@@ -593,7 +600,7 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
 
         # delete trgt from all points
         # if len(points_sorted_by_direction_z) > 1:
-        #delete_neighbours(vert_list, points_sorted_by_direction_ids[dir_i], [trgt_index], 0)
+        # delete_neighbours(vert_list, points_sorted_by_direction_ids[dir_i], [trgt_index], 0)
 
         closest_list_z.append(closest_z)
         closest_list_y.append(closest_y)
@@ -878,9 +885,21 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
         return False, 0, 0
 
 
+def generate_g_code(y_points, x_points, rotation_angle, speed):
+    with open('GCODE.txt', 'w') as f:
+        for y, z in zip(y_points[0], x_points[0]):
+            f.write(f"M02 X{y:.8f} Y{z:.8f} Z{rotation_angle:.8f}\n")
+
+        f.close()
+
+
 if __name__ == '__main__':
-    # do_stuff(265.2631578947368)
-    for f in numpy.linspace(0, 360, 5):
-        do_stuff(f)
+    outline_y, outline_z = project_outline(90)
+    plt.plot(outline_y, outline_z)
+    plt.show()
+
+    generate_g_code([outline_y], [outline_z], 0, 0)
+    # for f in numpy.linspace(0, 360, 5):
+    #     project_outline(f)
     # if abs(outer_vertexes[queue[0]].y - 49.60222) < p_tol and abs(outer_vertexes[queue[0]].z - 29) < p_tol:
     #     print("eish")
