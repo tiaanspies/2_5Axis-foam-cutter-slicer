@@ -30,7 +30,8 @@ def do_stuff(model_angle):
     # your_mesh = mesh.Mesh.from_file('cubev2_5.stl')
     # your_mesh = mesh.Mesh.from_file('cubev3.stl')
     # your_mesh = mesh.Mesh.from_file('cubev4.stl')
-    your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
+    your_mesh = mesh.Mesh.from_file('cone.stl')
+    # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
     """plot stl 3d model--------------------------"""
@@ -388,7 +389,7 @@ def do_stuff(model_angle):
     """----Follow outline around right hand side--------"""
     pyplot.figure(6)
     pyplot.cla()
-    pyplot.xlim([-100, 100])
+    # pyplot.xlim([-100, 100])
 
     min_angle = 10
     current_vert = outer_vertexes[bottom_right_index]
@@ -398,7 +399,7 @@ def do_stuff(model_angle):
     min_neigh_y = current_vert.neighbours_y[0]
 
     counter = 0
-    stop_limit = 150
+    stop_limit = 500
     angle_previous = numpy.deg2rad(180)
 
     # print_matrix(outer_vertexes)
