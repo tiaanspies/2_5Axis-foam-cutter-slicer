@@ -9,7 +9,7 @@ import random
 from operator import attrgetter
 import time
 
-p_tol = 1
+p_tol = 0.1
 
 
 class Vertex:
@@ -27,6 +27,7 @@ def do_stuff(model_angle):
     # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('cubev2.stl')
+    # your_mesh = mesh.Mesh.from_file('cubev2_5.stl')
     # your_mesh = mesh.Mesh.from_file('cubev3.stl')
     # your_mesh = mesh.Mesh.from_file('cubev4.stl')
     your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
@@ -219,7 +220,7 @@ def do_stuff(model_angle):
     #
     #     pyplot.plot([edge[0].y, edge[1].y], [edge[0].z, edge[1].z], color='red', linewidth=1)
     #
-    # # pyplot.show()
+    # pyplot.show()
 
     """Reconstruct edges"""
     outer_vertexes = [Vertex(outer_edges[0][0].y, outer_edges[0][0].z, [outer_edges[0][1].y], [outer_edges[0][1].z]),
@@ -286,7 +287,7 @@ def do_stuff(model_angle):
     #                      head_starts_at_zero=False, length_includes_head=True)
     #
     #     pyplot.plot(vert.y, vert.z, 'o', color='blue', markersize=2)
-    #
+
     # pyplot.show()
     # print_matrix(outer_vertexes)
     print("shortened co-linear lines")
@@ -364,7 +365,6 @@ def do_stuff(model_angle):
     #     pyplot.plot(vert.y, vert.z, 'o', color='blue', markersize=2)
 
     # pyplot.show()
-    # pyplot.show()
     # print_matrix(outer_vertexes)
     print("Intersections Added")
 
@@ -401,7 +401,7 @@ def do_stuff(model_angle):
     stop_limit = 150
     angle_previous = numpy.deg2rad(180)
 
-    print_matrix(outer_vertexes)
+    # print_matrix(outer_vertexes)
     while (abs(z_min - current_vert.z) > p_tol or abs(y_min_given_z_min - current_vert.y) > p_tol or counter == 0) and (
             counter < stop_limit):
         min_difference = 10
@@ -452,7 +452,7 @@ def do_stuff(model_angle):
                 break
     print("Path length: ", counter)
     pyplot.draw()
-    pyplot.pause(0.1)
+    pyplot.pause(1)
     # plt.show()
     # plt.show(block=False)
     # plt.pause(3)
@@ -592,7 +592,7 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
 
         # delete trgt from all points
         # if len(points_sorted_by_direction_z) > 1:
-        delete_neighbours(vert_list, points_sorted_by_direction_ids[dir_i], [trgt_index], 0)
+        #delete_neighbours(vert_list, points_sorted_by_direction_ids[dir_i], [trgt_index], 0)
 
         closest_list_z.append(closest_z)
         closest_list_y.append(closest_y)
@@ -608,7 +608,9 @@ def shorten_algorithm(vert_list, trgt_index, completed_vert_list_y, completed_ve
         add_neighbour(vert_list[closest_id], vert_list[trgt_index].y, vert_list[trgt_index].z)
 
         # delete all points in direction from target index then add closest
-        delete_neighbours(vert_list, [trgt_index], points_sorted_by_direction_ids[dir_i], 0)
+        # delete_neighbours(vert_list, [trgt_index], points_sorted_by_direction_ids[dir_i], 0)
+
+        # add closest to target
         add_neighbour(vert_list[trgt_index], closest_y, closest_z)
 
     completed_vert_list_z.append(vert_list[trgt_index].z)
@@ -759,6 +761,10 @@ def add_vertex(vertexes, new_vert):
 
 
 def add_neighbour(vertex, new_y, new_z):
+
+    if new_y == vertex.y and new_z == vertex.z:
+        return None
+
     for neigh_y, neigh_z in zip(vertex.neighbours_y, vertex.neighbours_z):
         if abs(neigh_y - new_y) < p_tol and abs(neigh_z - new_z) < p_tol:
             break
@@ -872,8 +878,8 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
 
 
 if __name__ == '__main__':
-    # do_stuff(284.2105263157895)
-    for f in numpy.linspace(0, 360, 20):
+    # do_stuff(265.2631578947368)
+    for f in numpy.linspace(0, 360, 5):
         do_stuff(f)
     # if abs(outer_vertexes[queue[0]].y - 49.60222) < p_tol and abs(outer_vertexes[queue[0]].z - 29) < p_tol:
     #     print("eish")
