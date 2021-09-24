@@ -3,7 +3,7 @@ import numpy
 import numpy as np
 from stl import mesh
 from matplotlib import pyplot
-# from mpl_toolkits import mplot3d
+from mpl_toolkits import mplot3d
 import math
 import random
 from operator import attrgetter
@@ -26,10 +26,10 @@ def project_outline(model_angle):
     # your_mesh = mesh.Mesh.from_file('LabradorLowPoly.stl')
     # your_mesh = mesh.Mesh.from_file('cube_1x1.stl')
     # your_mesh = mesh.Mesh.from_file('cubev2.stl')
-    your_mesh = mesh.Mesh.from_file('cubev2_5.stl')
+    # your_mesh = mesh.Mesh.from_file('cubev2_5.stl')
     # your_mesh = mesh.Mesh.from_file('cubev3.stl')
     # your_mesh = mesh.Mesh.from_file('cubev4.stl')
-    # your_mesh = mesh.Mesh.from_file('cone.stl')
+    your_mesh = mesh.Mesh.from_file('cone.stl')
     # your_mesh = mesh.Mesh.from_file('tool_holder_bars.stl')
     # your_mesh = mesh.Mesh.from_file('scad_chess_pawn.stl')
 
@@ -287,7 +287,7 @@ def project_outline(model_angle):
     #                      head_starts_at_zero=False, length_includes_head=True)
     #
     #     pyplot.plot(vert.y, vert.z, 'o', color='blue', markersize=2)
-
+    #
     # pyplot.show()
     # print_matrix(outer_vertexes)
     print("shortened co-linear lines")
@@ -885,20 +885,76 @@ def find_intersection(x0, y0, x1, y1, a0, b0, a1, b1):
         return False, 0, 0
 
 
-def generate_g_code(y_points, x_points, rotation_angle, speed):
-    with open('GCODE.txt', 'w') as f:
-        for y, z in zip(y_points[0], x_points[0]):
-            f.write(f"M02 X{y:.8f} Y{z:.8f} Z{rotation_angle:.8f}\n")
+def check_xy(x, y, x_min, x_max, y_min, y_max):
+    if x < x_min:
+        raise ValueError("point below x min")
 
+    if x > x_max:
+        raise ValueError("point above x max")
+
+    if y < y_min:
+        raise ValueError("point below y min")
+
+    if y > y_max:
+        raise ValueError("point above y max")
+
+
+def generate_g_code(y_points, x_points, rotation_angle, speed):
+    x_min = -95
+    x_max = 70
+    y_min = 0
+    y_max = 170
+    """
+    :param y_points:
+    :param x_points:
+    :param rotation_angle: 1mm is equivalent to 45 degrees movement
+    :param speed: feed rate
+    :return:
+    """
+    with open('GCODE.ngc', 'w') as f:
+        f.write(f"G21\n")  # Set units to mm
+        f.write(f"G00 X{50:.6f} Y{0:.6f} Z{0:.6f}\n")  # go to zero location
+        f.write(f"M03\n")  # Turn on heating wire
+        f.write(f"S70\n")  # Set wire power level
+        f.write(f"G04 P10\n")  # Pause for 10 seconds
+        f.write(f"G01 Z0 F{speed:.6f}\n")  # Set speed
+
+        for i in range(0, len(x_points)):
+            z = i*rotation_angle/45
+            f.write(f"G01 Z{z:.6f}\n")  # rotate block to next angle
+
+            if i % 2 == 0:  # one loop forwards, next backwards
+                for y, x in zip(y_points[i], x_points[i]):
+                    f.write(f"G01 X{y:.6f} Y{x:.6f}\n")  # move between points
+
+                f.write(f"G01 X-50\n")  # move out of block
+            else:
+                for y, x in zip(reversed(y_points[i]), reversed(x_points[i])):
+                    f.write(f"G01 X{y:.6f} Y{x:.6f}\n")  # move between points in reverse order
+
+                f.write(f"G01 X50\n")  # move out of block
+
+        f.write(f"S00\n")  # set wire power level to 0%
         f.close()
 
 
 if __name__ == '__main__':
-    outline_y, outline_z = project_outline(90)
-    plt.plot(outline_y, outline_z)
-    plt.show()
+    face_number = 4
+    outline_y = []
+    outline_z = []
+    for angle in numpy.linspace(0, 360, face_number + 1):
+        if angle == 360:
+            break
 
-    generate_g_code([outline_y], [outline_z], 0, 0)
+        outline_y_p, outline_z_p = project_outline(angle)
+        outline_y.append(outline_y_p)
+        outline_z.append(outline_z_p)
+
+        # plt.plot(outline_y_p, outline_z_p)
+        # pyplot.plot(outline_y_p, outline_z_p, 'o', color='red', markersize=2)
+        # plt.show()
+
+    generate_g_code(outline_y, outline_z, 90, 300)
     # for f in numpy.linspace(0, 360, 5):
     #     project_outline(f)
     # if abs(outer_vertexes[queue[0]].y - 49.60222) < p_tol and abs(outer_vertexes[queue[0]].z - 29) < p_tol:
