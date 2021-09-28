@@ -62,14 +62,13 @@ class StartPage(tk.Frame):
         import_label_text.set("No file loaded")
 
         import_text = tk.StringVar()
-        import_button = tk.Button(self, textvariable=import_text, command=lambda: import_stl_file(self, import_text,
-                                                                                                  import_label_text,
-                                                                                                  label_import))
+        import_button = tk.Button(self, textvariable=import_text, bg="lightblue",
+                                  command=lambda: import_stl_file(self, import_text, import_label_text, label_import))
         import_button.grid(column=1, row=0, sticky="W")
         import_text.set("Import")
 
-        label_speed = tk.Label(self, text="Feed Rate")
-        label_angle = tk.Label(self, text="Number of cuts")
+        label_speed = tk.Label(self, text="Feed Rate", font=("Times", "12", "bold"))
+        label_angle = tk.Label(self, text="Number of cuts", font=("Times", "12", "bold"))
 
         label_speed.grid(column=0, row=1)
         label_angle.grid(column=0, row=2)
@@ -86,34 +85,26 @@ class StartPage(tk.Frame):
         entry_speed.grid(column=1, row=1)
         entry_angle.grid(column=1, row=2)
 
-        # label2 = tk.Label(self, text="Computed cuts")
-        # label2.grid(column=2, row=0, padx=5)
-        # figure2 = plt.Figure(figsize=(5, 4), dpi=100)
-        # ax2 = figure2.add_subplot(111)
-        # line2 = FigureCanvasTkAgg(figure2, self)
-        # line2.get_tk_widget().grid(column=2, row=0, rowspan=6)
-        # # ax2.plot([1, 0.5], [0, 1], color='red')
-        # ax2.set_title('STL object outline')
-
         project_text = tk.StringVar()
         project_text.set("Find outline")
-        project_button = tk.Button(self, textvariable=project_text, command=lambda: process_stl(self,
-                                                                                                project_text,
-                                                                                                label_page_num_text,
-                                                                                                entry_angle.get()))
+        project_button = tk.Button(self, textvariable=project_text, bg="lightblue",
+                                   command=lambda: process_stl(self, project_text,
+                                                               label_page_num_text, entry_angle.get()))
         project_button.grid(column=0, columnspan=2, row=3)
 
         place_holder_label = tk.Label(self, text=" ", width=70, height=26, bg="lightgray")
         place_holder_label.grid(row=0, column=2, rowspan=4, columnspan=3, pady=20, padx=20)
 
-        right_button = tk.Button(self, text="Right", command=lambda: next_projection(self, label_page_num_text))
+        right_button = tk.Button(self, text="Right", width=10, font=("Times", "12", "bold"),
+                                 command=lambda: next_projection(self, label_page_num_text))
         right_button.grid(column=4, row=4, pady=10)
 
-        left_button = tk.Button(self, text="Left", command=lambda: previous_projection(self, label_page_num_text))
+        left_button = tk.Button(self, text="Left", width=10, font=("Times", "12", "bold"),
+                                command=lambda: previous_projection(self, label_page_num_text))
         left_button.grid(column=2, row=4)
 
         label_page_num_text = tk.StringVar()
-        label_page_num = tk.Label(self, textvariable=label_page_num_text)
+        label_page_num = tk.Label(self, textvariable=label_page_num_text, font=("Times", "14", "bold"))
         label_page_num.grid(column=3, row=4)
         label_page_num_text.set("0 of 0")
 
@@ -123,9 +114,10 @@ class StartPage(tk.Frame):
         label_page_num = tk.Label(self, text="File name (without .gcode)")
         label_page_num.grid(column=2, row=5, pady=10)
 
-        gcode_button = tk.Button(self, text="Generate G-Code", command=lambda: generate_gcode(entry_angle.get(),
-                                                                                              entry_speed.get(),
-                                                                                              entry_file_name.get()))
+        gcode_button = tk.Button(self, text="Generate G-Code", bg="lightblue",
+                                 command=lambda: generate_gcode(entry_angle.get(),
+                                                                entry_speed.get(),
+                                                                entry_file_name.get()))
         gcode_button.grid(column=4, row=5)
 
 
