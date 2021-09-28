@@ -899,9 +899,7 @@ def check_xy(x, y, x_min, x_max, y_min, y_max):
         raise ValueError("point above y max")
 
 
-def generate_g_code(y_points, x_points, rotation_angle, speed):
-    # TODO: make power level variable
-    # TODO: make feed rate variable
+def generate_g_code(y_points, x_points, rotation_angle, speed, file_name):
     x_min = -95
     x_max = 70
     y_min = 0
@@ -913,7 +911,7 @@ def generate_g_code(y_points, x_points, rotation_angle, speed):
     :param speed: feed rate
     :return:
     """
-    with open('GCODE.ngc', 'w') as f:
+    with open('gcode/'+file_name+'.ngc', 'w') as f:
         f.write(f"G21\n")  # Set units to mm
         f.write(f"G00 X{50:.6f} Y{0:.6f} Z{0:.6f}\n")  # go to zero location
         f.write(f"M03\n")  # Turn on heating wire
@@ -928,24 +926,27 @@ def generate_g_code(y_points, x_points, rotation_angle, speed):
             if i % 2 == 0:  # one loop forwards, next backwards
                 for y, x in zip(y_points[i], x_points[i]):
                     f.write(f"G01 X{y:.6f} Y{x:.6f}\n")  # move between points
-
-                f.write(f"G01 X-50\n")  # move out of block
+                if i < len(x_points):
+                    f.write(f"G01 X-50\n")  # move out of block
+                else:
+                    f.write(f"G01 X50\n")  # cut off block
             else:
                 for y, x in zip(reversed(y_points[i]), reversed(x_points[i])):
                     f.write(f"G01 X{y:.6f} Y{x:.6f}\n")  # move between points in reverse order
-
-                f.write(f"G01 X50\n")  # move out of block
+                if i < len(x_points):
+                    f.write(f"G01 X50\n")  # move out of block
+                else:
+                    f.write(f"G01 -X50\n")  # cut off block
 
         f.write(f"S00\n")  # set wire power level to 0%
         f.close()
 
 
-def project(file_name):
-    face_number = 4
+def project(file_name, face_number):
     outline_y = []
     outline_z = []
-    for angle in numpy.linspace(0, 360, face_number + 1):
-        if angle == 360:
+    for angle in numpy.linspace(0, 180, face_number + 1):
+        if angle == 180:
             break
 
         outline_y_p, outline_z_p = project_outline(angle, file_name)

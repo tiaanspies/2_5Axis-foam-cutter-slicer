@@ -8,6 +8,7 @@ from tkinter.filedialog import askopenfile
 from tkinter import ttk
 import matplotlib.pyplot as plt
 import StlProjection as STL
+from tkinter import messagebox
 
 matplotlib.use("TkAgg")
 
@@ -56,14 +57,14 @@ class StartPage(tk.Frame):
         tk.Frame.__init__(self, parent)
 
         import_label_text = tk.StringVar()
-        label = tk.Label(self, textvariable=import_label_text, width=25, bd=2, bg="Gray")
-        label.grid(column=0, row=0, pady=10,  padx=5, sticky="W")
+        label_import = tk.Label(self, textvariable=import_label_text, width=25, bd=2, bg="Gray")
+        label_import.grid(column=0, row=0, pady=10, padx=5, sticky="W")
         import_label_text.set("No file loaded")
 
         import_text = tk.StringVar()
         import_button = tk.Button(self, textvariable=import_text, command=lambda: import_stl_file(self, import_text,
                                                                                                   import_label_text,
-                                                                                                  label))
+                                                                                                  label_import))
         import_button.grid(column=1, row=0, sticky="W")
         import_text.set("Import")
 
@@ -96,18 +97,36 @@ class StartPage(tk.Frame):
 
         project_text = tk.StringVar()
         project_text.set("Find outline")
-        project_button = tk.Button(self, textvariable=project_text, command=lambda: update_graph(self,
-                                                                                                 project_text))
+        project_button = tk.Button(self, textvariable=project_text, command=lambda: process_stl(self,
+                                                                                                project_text,
+                                                                                                label_page_num_text,
+                                                                                                entry_angle.get()))
         project_button.grid(column=0, columnspan=2, row=3)
 
-        place_holder_label = tk.Label(self, text=" ", width=70, height=30)
-        place_holder_label.grid(row=1, column=2, rowspan=3, columnspan=2)
+        place_holder_label = tk.Label(self, text=" ", width=70, height=26, bg="lightgray")
+        place_holder_label.grid(row=0, column=2, rowspan=4, columnspan=3, pady=20, padx=20)
 
-        right_button = tk.Button(self, text="Right", command=lambda: next_projection(self))
-        right_button.grid(column=3, row=4)
+        right_button = tk.Button(self, text="Right", command=lambda: next_projection(self, label_page_num_text))
+        right_button.grid(column=4, row=4, pady=10)
 
-        left_button = tk.Button(self, text="Left", command=lambda: previous_projection(self))
+        left_button = tk.Button(self, text="Left", command=lambda: previous_projection(self, label_page_num_text))
         left_button.grid(column=2, row=4)
+
+        label_page_num_text = tk.StringVar()
+        label_page_num = tk.Label(self, textvariable=label_page_num_text)
+        label_page_num.grid(column=3, row=4)
+        label_page_num_text.set("0 of 0")
+
+        entry_file_name = tk.Entry(self, width=30, text="Output file name")
+        entry_file_name.grid(column=3, row=5)
+
+        label_page_num = tk.Label(self, text="File name (without .gcode)")
+        label_page_num.grid(column=2, row=5, pady=10)
+
+        gcode_button = tk.Button(self, text="Generate G-Code", command=lambda: generate_gcode(entry_angle.get(),
+                                                                                              entry_speed.get(),
+                                                                                              entry_file_name.get()))
+        gcode_button.grid(column=4, row=5)
 
 
 def import_stl_file(self, button_text_object, label_text_object, label_object):
@@ -118,31 +137,35 @@ def import_stl_file(self, button_text_object, label_text_object, label_object):
         global file_name
         file_name = file.name
         backslash_location = file_name.rfind('/')
-        label_text_object.set(file_name[backslash_location+1:]+" selected")
+        label_text_object.set(file_name[backslash_location + 1:] + " selected")
         label_object.config(bg="#B8FA95")
 
 
-def next_projection(self):
+def next_projection(self, page_text):
     global graph_index
     graph_index += 1
 
     if graph_index >= graph_index_max:
-        graph_index = graph_index_max-1
+        graph_index = graph_index_max - 1
+
+    page_text.set(str(graph_index + 1) + " of " + str(graph_index_max))
 
     draw_graph(self, graph_index)
 
 
-def previous_projection(self):
+def previous_projection(self, page_text):
     global graph_index
     graph_index -= 1
 
     if graph_index < 0:
         graph_index = 0
 
+    page_text.set(str(graph_index + 1) + " of " + str(graph_index_max))
+
     draw_graph(self, graph_index)
 
 
-def update_graph(self, project_text_object):
+def process_stl(self, project_text_object, page_text, face_number):
     project_text_object.set("Processing")
 
     global x_arr
@@ -151,20 +174,27 @@ def update_graph(self, project_text_object):
     global graph_index_max
 
     graph_index = 0
-    x_arr, y_arr = STL.project(file_name)
+    x_arr, y_arr = STL.project(file_name, int(face_number))
     graph_index_max = len(x_arr)
 
     draw_graph(self, graph_index)
     project_text_object.set("Find outline")
+
+    page_text.set(str(graph_index + 1) + " of " + str(graph_index_max))
 
 
 def draw_graph(self, proj_id):
     figure2 = plt.Figure(figsize=(5, 4), dpi=100)
     ax2 = figure2.add_subplot(111)
     line2 = FigureCanvasTkAgg(figure2, self)
-    line2.get_tk_widget().grid(column=2, row=1, rowspan=3, columnspan=2)
+    line2.get_tk_widget().grid(column=2, row=0, rowspan=4, columnspan=3, padx=10, pady=5)
     ax2.plot(x_arr[proj_id], y_arr[proj_id], color='red')
     ax2.set_title('STL object outline')
+
+
+def generate_gcode(face_number, feed_rate, output_name):
+    STL.generate_g_code(x_arr, y_arr, 180.0/float(face_number), float(feed_rate), output_name)
+    tk.messagebox.showinfo(title="Foam Slicer Notification", message="G-Code sucessfully generated")
 
 
 if __name__ == '__main__':
